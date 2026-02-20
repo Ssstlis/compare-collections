@@ -5,7 +5,7 @@ import io.github.ssstlis.collection_compare.model.DocumentResult
 import io.github.ssstlis.collection_compare.mongo.BsonUtils
 import org.apache.poi.ss.usermodel._
 import org.apache.poi.ss.util.CellReference
-import org.apache.poi.xssf.usermodel.{XSSFCell, XSSFColor, XSSFWorkbook}
+import org.apache.poi.xssf.usermodel.{XSSFCell, XSSFWorkbook}
 
 import java.io.FileOutputStream
 import java.nio.file.Path

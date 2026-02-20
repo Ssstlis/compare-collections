@@ -1,14 +1,12 @@
 package io.github.ssstlis.collection_compare.mongo
 
 import io.github.ssstlis.collection_compare.util.DurationFormatter
-import me.tongfei.progressbar.{ProgressBar, ProgressBarStyle}
+import me.tongfei.progressbar.ProgressBar
 import org.bson.BsonDocument
-import org.mongodb.scala.bson.BsonString
 import org.mongodb.scala.model.Projections
 import org.mongodb.scala.{Document, MongoClient, MongoCollection, MongoDatabase}
 import org.slf4j.{Logger, LoggerFactory}
 
-import scala.collection.mutable
 import scala.concurrent.{Await, Promise}
 import scala.concurrent.duration._
 
@@ -17,7 +15,7 @@ import java.time.{Duration => JDuration}
 class MongoService(config: MongoConfig, db: String, requestTimeout: Duration) extends DocFetcher {
   private val logger: Logger = LoggerFactory.getLogger("MongoService")
   private val client:   MongoClient   = MongoClient(config.connectionString)
-  private val database: MongoDatabase = client.getDatabase(config.database)
+  private val database: MongoDatabase = client.getDatabase(db)
 
   def fetchDocs(
     collectionName:    String,
