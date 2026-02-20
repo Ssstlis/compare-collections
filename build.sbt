@@ -6,8 +6,10 @@ ThisBuild / version := "0.1.0-SNAPSHOT"
 ThisBuild / scalaVersion := "2.13.18"
 
 lazy val root = (project in file("."))
+  .enablePlugins(JavaAppPackaging)
   .settings(
     scalacOptions := Seq(
+      "-release:11",
       "-g:vars",
       "-unchecked",
       "-deprecation",

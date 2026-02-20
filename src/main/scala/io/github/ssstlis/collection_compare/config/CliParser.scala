@@ -17,42 +17,54 @@ object CliParser {
     OParser.sequence(
       programName("compare-collections"),
       head("compare-collections", "0.1.0"),
+      opt[String]("mode")
+        .validate(v => RunMode.parse(v).map(_ => ()))
+        .action((v, c) => c.copy(mode = RunMode.parse(v).getOrElse(RunMode.Remote)))
+        .text("Run mode: remote (default, connects to MongoDB) or file (reads from local Extended JSON files)"),
       opt[String]("collection1")
         .required()
         .action((v, c) => c.copy(collection1 = v))
-        .text("Name of the first MongoDB collection"),
+        .text("Name of the first collection (also used for output file naming)"),
       opt[String]("collection2")
         .required()
         .action((v, c) => c.copy(collection2 = v))
-        .text("Name of the second MongoDB collection"),
+        .text("Name of the second collection (also used for output file naming)"),
+      // ── remote-mode flags ────────────────────────────────────────────────
       opt[String]("db1")
-        .required()
         .action((v, c) => c.copy(db1 = v))
-        .text("Name of the first MongoDB DB"),
+        .text("[remote] Name of the first MongoDB database"),
       opt[String]("db2")
-        .required()
         .action((v, c) => c.copy(db2 = v))
-        .text("Name of the second MongoDB DB"),
+        .text("[remote] Name of the second MongoDB database"),
       opt[String]("host1")
-        .required()
         .action((v, c) => c.copy(host1 = Some(v)))
-        .text("Named config key for collection1 (looks up mongodb.<key> in application.conf; default: \"default\")"),
+        .text("[remote] Named config key for collection1 (looks up mongodb.<key> in conf file; default: \"default\")"),
       opt[String]("host2")
-        .required()
         .action((v, c) => c.copy(host2 = Some(v)))
-        .text("Named config key for collection2 (looks up mongodb.<key> in application.conf; default: \"default\")"),
+        .text("[remote] Named config key for collection2 (looks up mongodb.<key> in conf file; default: \"default\")"),
+      opt[Unit]("keep")
+        .action((_, c) => c.copy(keep = true))
+        .text("[remote] Save fetched documents as Relaxed Extended JSON arrays alongside reports"),
       opt[String]("filter")
         .action((v, c) => c.copy(filter = v))
-        .text("MongoDB filter as JSON string (default: {})"),
+        .text("[remote] MongoDB filter as JSON string (default: {})"),
       opt[Int]("request_timeout")
         .action((v, c) => c.copy(requestTimeout = FiniteDuration(v, TimeUnit.SECONDS)))
-        .text("Request timeout in seconds (default: 30)"),
+        .text("[remote] Request timeout in seconds (default: 30)"),
+      opt[String]("projection-exclude")
+        .action((v, c) => c.copy(projectionExclude = parseList(v)))
+        .text("[remote] Comma-separated fields to exclude from MongoDB projection (not fetched at all)"),
+      // ── file-mode flags ──────────────────────────────────────────────────
+      opt[String]("file1")
+        .action((v, c) => c.copy(file1 = Some(v)))
+        .text("[file] Path to a MongoDB Relaxed Extended JSON array file for collection1"),
+      opt[String]("file2")
+        .action((v, c) => c.copy(file2 = Some(v)))
+        .text("[file] Path to a MongoDB Relaxed Extended JSON array file for collection2"),
+      // ── common flags ─────────────────────────────────────────────────────
       opt[String]("exclude-fields")
         .action((v, c) => c.copy(excludeFields = parseList(v)))
         .text("Comma-separated fields to exclude from comparison, e.g. time,periodId"),
-      opt[String]("projection-exclude")
-        .action((v, c) => c.copy(projectionExclude = parseList(v)))
-        .text("Comma-separated fields to exclude from MongoDB projection (not fetched at all), e.g. largeField,blob"),
       opt[Int]("round-precision")
         .action((v, c) => c.copy(roundPrecision = v))
         .text("Decimal places to round numeric values to (default: 0)"),
@@ -71,18 +83,70 @@ object CliParser {
           "e.g. \"abs_pnl_diff desc, abs_fee_diff desc\". Overrides default sort by totalDiffScore."),
       opt[String]("reports")
         .action((v, c) => c.copy(reports = parseList(v).map(ReportType.parse(_).get).distinct))
-        .text("Report that being generated.Available options: (csv, json, excel)."),
+        .text("Report formats to generate. Available options: (csv, json, excel)."),
       opt[String]("formula_delim")
         .action((v, c) => c.copy(excelFormulasDelimiter = ExcelFormulaSeparator.parse(v).get))
-        .text("Formula arguments delimiter that being used.Available options: (comma, semicolon)."),
+        .text("Formula arguments delimiter. Available options: (comma, semicolon)."),
     )
   }
 
-  def parse(args: Array[String]): Option[CliConfig] = {
+  def parse(args: Array[String]): Option[AppConfig] = {
     val setup: OParserSetup = new DefaultOParserSetup {
-      override def showUsageOnError = Some(true)
+      override def showUsageOnError      = Some(true)
       override def errorOnUnknownArgument: Boolean = false
     }
-    OParser.parse(parser, args, CliConfig(), setup)
+    OParser.parse(parser, args, CliConfig(), setup).flatMap(toAppConfig)
+  }
+
+  private def toAppConfig(raw: CliConfig): Option[AppConfig] = raw.mode match {
+    case RunMode.Remote =>
+      if (raw.db1.isEmpty || raw.db2.isEmpty) {
+        System.err.println("Error: --db1 and --db2 are required in remote mode")
+        None
+      } else {
+        Some(RemoteConfig(
+          collection1            = raw.collection1,
+          collection2            = raw.collection2,
+          db1                    = raw.db1,
+          db2                    = raw.db2,
+          host1                  = raw.host1.getOrElse("default"),
+          host2                  = raw.host2.getOrElse("default"),
+          keep                   = raw.keep,
+          filter                 = raw.filter,
+          requestTimeout         = raw.requestTimeout,
+          projectionExclude      = raw.projectionExclude,
+          excludeFields          = raw.excludeFields,
+          roundPrecision         = raw.roundPrecision,
+          outputPath             = raw.outputPath,
+          reports                = raw.reports,
+          key                    = raw.key,
+          excludeFromCut         = raw.excludeFromCut,
+          sortBy                 = raw.sortBy,
+          excelFormulasDelimiter = raw.excelFormulasDelimiter
+        ))
+      }
+
+    case RunMode.File =>
+      if (raw.keep) System.err.println("Warning: --keep is ignored in file mode")
+      (raw.file1, raw.file2) match {
+        case (Some(f1), Some(f2)) =>
+          Some(FileConfig(
+            collection1            = raw.collection1,
+            collection2            = raw.collection2,
+            file1                  = f1,
+            file2                  = f2,
+            excludeFields          = raw.excludeFields,
+            roundPrecision         = raw.roundPrecision,
+            outputPath             = raw.outputPath,
+            reports                = raw.reports,
+            key                    = raw.key,
+            excludeFromCut         = raw.excludeFromCut,
+            sortBy                 = raw.sortBy,
+            excelFormulasDelimiter = raw.excelFormulasDelimiter
+          ))
+        case _ =>
+          System.err.println("Error: --file1 and --file2 are required in file mode")
+          None
+      }
   }
 }

@@ -4,7 +4,7 @@ import io.github.ssstlis.collection_compare.config.{ExcelFormulaSeparator, Repor
 import io.github.ssstlis.collection_compare.model.{ComparisonReport, DocumentResult}
 import io.github.ssstlis.collection_compare.writer.{CsvWriter, ExcelWriter, JsonWriter}
 
-import java.nio.file.{Files, Paths}
+import java.nio.file.{Files, Path, Paths}
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -12,31 +12,36 @@ object ReportOrchestrator {
 
   private val Fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss")
 
-  /** Writes all reports and returns the output directory.
+  /** Creates a timestamped output directory under `outputPath` and returns its path. */
+  def makeDir(outputPath: String): Path = {
+    val timestamp = LocalDateTime.now().format(Fmt)
+    val dir       = Paths.get(outputPath, s"compare_$timestamp")
+    Files.createDirectories(dir)
+    dir
+  }
+
+  /** Writes all reports to `dir` and returns `dir`.
     *
     * @param report      full comparison report
     * @param hasDiffCut  has_diff documents with all-same columns stripped
-    * @param outputPath  root directory for the timestamped report folder
-    * @param host1       config key / label for the first mongo host
+    * @param dir         pre-created output directory (use [[makeDir]] to create it)
+    * @param reports     report formats to generate
+    * @param host1       config key / label for the first source
     * @param collection1 collection name for the first source
-    * @param host2       config key / label for the second mongo host
+    * @param host2       config key / label for the second source
     * @param collection2 collection name for the second source
     */
   def write(
     report:      ComparisonReport,
     hasDiffCut:  List[DocumentResult],
-    outputPath:  String,
-    reports: List[ReportType],
+    dir:         Path,
+    reports:     List[ReportType],
     host1:       String,
     collection1: String,
     host2:       String,
     collection2: String,
-    delim: ExcelFormulaSeparator
-  ): java.nio.file.Path = {
-    val timestamp = LocalDateTime.now().format(Fmt)
-    val dir       = Paths.get(outputPath, s"compare_$timestamp")
-    Files.createDirectories(dir)
-
+    delim:       ExcelFormulaSeparator
+  ): Path = {
     println(s"\nWriting reports to: $dir")
 
     def writeAll(name: String, docs: List[DocumentResult], enrichedExcel: Boolean = false): Unit = {

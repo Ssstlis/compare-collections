@@ -1,10 +1,12 @@
 # compare-collections
 
-Инструмент для сравнения двух коллекций MongoDB и генерации отчётов о различиях.
+Инструмент для сравнения двух коллекций MongoDB (или предварительно сохранённых JSON-файлов) и генерации отчётов о различиях.
 
 ## Возможности
 
 - Сравнение документов по составному ключу из двух коллекций (в т.ч. из разных MongoDB-инстансов)
+- **Два режима работы**: подключение к MongoDB (`--mode remote`) или чтение из файлов (`--mode file`)
+- Сохранение загруженных данных в виде Extended JSON файлов для повторного использования (`--keep`)
 - Рекурсивное разворачивание вложенных документов (dot notation)
 - Опциональное округление числовых значений перед сравнением
 - Исключение произвольных полей из сравнения
@@ -17,9 +19,9 @@
 
 ## Требования
 
-- JDK 11+
-- SBT 1.x
-- MongoDB (доступная по URI из конфига)
+- JDK 11+ (для запуска)
+- SBT 1.x (только для сборки)
+- MongoDB (только для `--mode remote`)
 
 ## Конфигурация
 
@@ -56,34 +58,159 @@ mongodb {
 Флаги `--host1` / `--host2` принимают **имя секции** (ключ в `mongodb { ... }`).
 Каждая коллекция может использовать отдельное подключение с полным набором настроек.
 
+### Использование собственного конфигурационного файла
+
+Не изменяйте `src/main/resources/application.conf` напрямую и не коммитьте в него credentials.
+Создайте файл в любом месте (например `~/my-mongo.conf`) и передайте его через `JAVA_OPTS`:
+
+```bash
+JAVA_OPTS="-Dconfig.file=/path/to/my-mongo.conf" \
+  bin/compare-collections \
+  --collection1 FeeReport \
+  --collection2 FeeReport \
+  --db1 prod \
+  --db2 staging \
+  --host1 prod \
+  --host2 staging
+```
+
+Файл должен иметь ту же структуру, что и `application.conf`:
+
+```hocon
+mongodb {
+
+  prod {
+    host     = "mongo-prod.example.com"
+    port     = 27017
+    user     = "admin"
+    password = "secret"
+    database = "proddb"
+  }
+
+  staging {
+    host     = "mongo-staging.example.com"
+    port     = 27017
+    user     = ""
+    password = ""
+    database = "stagingdb"
+  }
+
+}
+```
+
+> Секция `default` не обязательна, если всегда явно передаются `--host1` и `--host2`.
+
 ## Сборка
 
 ```bash
-sbt compile
+# Сборка и генерация запускаемого дистрибутива в target/universal/stage/
+sbt stage
+
+# Сборка zip-архива дистрибутива в target/universal/
+sbt universal:packageBin
 ```
+
+После `sbt stage` скрипт запуска находится по пути `target/universal/stage/bin/compare-collections`.
+Для удобства добавьте его в `PATH` или создайте симлинк.
 
 ## Запуск
 
 ```bash
-sbt "run --collection1 <col1> --collection2 <col2> [опции]"
+bin/compare-collections --collection1 <col1> --collection2 <col2> [опции]
 ```
 
-### Параметры
+> Для разработки можно использовать `sbt "run ..."` напрямую без сборки дистрибутива.
+
+## Режимы работы
+
+### `--mode remote` (по умолчанию)
+
+Подключается к двум экземплярам MongoDB и загружает данные напрямую.
+
+```bash
+bin/compare-collections \
+  --collection1 FeeReport_old \
+  --collection2 FeeReport_new \
+  --db1 mydb \
+  --db2 mydb
+```
+
+При использовании `--keep` загруженные документы сохраняются рядом с отчётами в виде файлов
+`<host1>-<db1>-<collection1>.json` и `<host2>-<db2>-<collection2>.json` в формате MongoDB Relaxed Extended JSON v2.
+Эти файлы можно затем использовать в режиме `--mode file`.
+
+```bash
+bin/compare-collections \
+  --collection1 FeeReport_old \
+  --collection2 FeeReport_new \
+  --db1 mydb \
+  --db2 mydb \
+  --keep \
+  --output-path /tmp/reports
+# → создаст /tmp/reports/compare_YYYY-MM-DD_HH-mm-ss/default-mydb-FeeReport_old.json
+#           /tmp/reports/compare_YYYY-MM-DD_HH-mm-ss/default-mydb-FeeReport_new.json
+```
+
+### `--mode file`
+
+Читает документы из локальных файлов в формате MongoDB Relaxed Extended JSON v2 (массив объектов).
+Подключение к MongoDB не требуется; флаги `--db1`, `--db2`, `--host1`, `--host2`, `--filter`,
+`--projection-exclude`, `--request_timeout` игнорируются.
+
+```bash
+bin/compare-collections \
+  --mode file \
+  --collection1 FeeReport_old \
+  --collection2 FeeReport_new \
+  --file1 /tmp/reports/compare_2025-01-15_14-30-00/FeeReport_old.json \
+  --file2 /tmp/reports/compare_2025-01-15_14-30-00/FeeReport_new.json
+```
+
+**Формат файла** — JSON-массив документов в MongoDB Relaxed Extended JSON v2:
+```json
+[
+  {"_id": {"$oid": "507f1f77bcf86cd799439011"}, "amount": 100.5, "ts": {"$date": "2025-01-01T00:00:00Z"}},
+  {"_id": {"$oid": "507f1f77bcf86cd799439012"}, "amount": 200.0, "ts": {"$date": "2025-01-02T00:00:00Z"}}
+]
+```
+
+## Параметры
+
+### Общие (применяются в обоих режимах)
 
 | Параметр               | Обязательный | По умолчанию | Описание                                                                                                       |
 |------------------------|--------------|--------------|----------------------------------------------------------------------------------------------------------------|
-| `--collection1`        | да           | —            | Имя первой коллекции                                                                                           |
-| `--collection2`        | да           | —            | Имя второй коллекции                                                                                           |
-| `--host1`              | нет          | `default`    | Имя секции в `mongodb { ... }` для первой коллекции                                                            |
-| `--host2`              | нет          | `default`    | Имя секции в `mongodb { ... }` для второй коллекции                                                            |
-| `--filter`             | нет          | `{}`         | MongoDB-фильтр в виде JSON-строки                                                                              |
+| `--collection1`        | да           | —            | Имя первой коллекции (используется для именования файлов отчётов)                                              |
+| `--collection2`        | да           | —            | Имя второй коллекции (используется для именования файлов отчётов)                                              |
+| `--mode`               | нет          | `remote`     | Режим работы: `remote` (подключение к MongoDB) или `file` (чтение из файлов)                                   |
 | `--exclude-fields`     | нет          | —            | Поля, исключаемые из сравнения (через запятую или `(f1,f2)`)                                                   |
-| `--projection-exclude` | нет          | —            | Поля, исключаемые из MongoDB-проекции — не загружаются вовсе (через запятую или `(f1,f2)`)                     |
 | `--round-precision`    | нет          | `0`          | Количество знаков после запятой при округлении числовых значений                                               |
 | `--output-path`        | нет          | `.`          | Папка для сохранения отчётов                                                                                   |
 | `--key`                | нет          | `_id`        | Ключевые поля для сопоставления документов; всегда сохраняются в `_cut`-отчёте (формат: `field` или `(f1,f2)`) |
 | `--exclude-from-cut`   | нет          | —            | Поля, которые всегда остаются в `_cut`-отчёте, даже если не имеют различий                                     |
 | `--sort`               | нет          | totalDiffScore desc | Порядок сортировки результатов. Формат: `[abs_]<field>_(diff\|1\|2) [asc\|desc]`, через запятую |
+| `--reports`            | нет          | `json`       | Форматы отчётов: `csv`, `json`, `excel`                                                                        |
+| `--formula_delim`      | нет          | `semicolon`  | Разделитель аргументов в Excel-формулах: `comma` или `semicolon`                                               |
+
+### Флаги режима `remote`
+
+| Параметр               | Обязательный | По умолчанию | Описание                                                                    |
+|------------------------|--------------|--------------|-----------------------------------------------------------------------------|
+| `--db1`                | да           | —            | Имя первой MongoDB-базы данных                                              |
+| `--db2`                | да           | —            | Имя второй MongoDB-базы данных                                              |
+| `--host1`              | нет          | `default`    | Имя секции в `mongodb { ... }` для первой коллекции                         |
+| `--host2`              | нет          | `default`    | Имя секции в `mongodb { ... }` для второй коллекции                         |
+| `--keep`               | нет          | `false`      | Сохранить загруженные документы как Extended JSON рядом с отчётами           |
+| `--filter`             | нет          | `{}`         | MongoDB-фильтр в виде JSON-строки                                           |
+| `--projection-exclude` | нет          | —            | Поля, исключаемые из MongoDB-проекции — не загружаются вовсе                |
+| `--request_timeout`    | нет          | `30`         | Таймаут запроса к MongoDB в секундах                                        |
+
+### Флаги режима `file`
+
+| Параметр | Обязательный | Описание                                                               |
+|----------|--------------|------------------------------------------------------------------------|
+| `--file1`| да           | Путь к файлу с данными первой коллекции (MongoDB Relaxed Extended JSON)|
+| `--file2`| да           | Путь к файлу с данными второй коллекции (MongoDB Relaxed Extended JSON)|
 
 ### Сортировка (`--sort`)
 
@@ -98,9 +225,6 @@ sbt "run --collection1 <col1> --collection2 <col2> [опции]"
 | `abs_<field>_1 desc`       | сортировка по `|value1|` (для числовых полей)   |
 
 Метрика `_diff` осмысленна только для числовых полей — для остальных `numericDiff` всегда `0.0`.
-
-Для `_1` / `_2` все значения преобразуются в строку. Если обе строки парсятся как число — используется числовое сравнение; иначе — лексикографическое. Отсутствующее поле считается `""` (минимальным).
-
 Направление по умолчанию — `desc`. Если `--sort` не передан, результаты сортируются по `totalDiffScore desc`.
 
 ```bash
@@ -109,80 +233,117 @@ sbt "run --collection1 <col1> --collection2 <col2> [опции]"
 --sort "fee_diff"
 ```
 
-### Примеры
+## Примеры
 
-Простое сравнение двух коллекций:
+**Простое сравнение (remote):**
 
 ```bash
-sbt "run --collection1 users_old --collection2 users_new"
+bin/compare-collections \
+  --collection1 users_old \
+  --collection2 users_new \
+  --db1 mydb \
+  --db2 mydb
 ```
 
-Коллекции из разных MongoDB-инстансов (каждый описан в `application.conf`):
+**Коллекции из разных MongoDB-инстансов:**
 
 ```bash
-# application.conf: mongodb { old { host = "mongo-old" ... } new { host = "mongo-new" ... } }
-sbt "run \
+# my-mongo.conf: mongodb { old { host = "mongo-old" ... } new { host = "mongo-new" ... } }
+JAVA_OPTS="-Dconfig.file=/path/to/my-mongo.conf" \
+  bin/compare-collections \
   --collection1 FeeReport_old \
   --collection2 FeeReport_new \
+  --db1 psm \
+  --db2 psm \
   --host1 old \
   --host2 new \
-  --output-path /tmp/reports"
+  --output-path /tmp/reports
 ```
 
-Полный пример с фильтром, исключёнными полями и срезом:
+**Сохранить данные для повторного использования:**
 
 ```bash
-sbt "run \
+# Шаг 1: загрузить из MongoDB и сохранить
+JAVA_OPTS="-Dconfig.file=/path/to/my-mongo.conf" \
+  bin/compare-collections \
+  --collection1 FeeReport \
+  --collection2 FeeReport \
+  --db1 prod \
+  --db2 staging \
+  --host1 prod \
+  --host2 staging \
+  --keep \
+  --output-path /tmp/reports
+
+# Шаг 2: использовать сохранённые файлы (без подключения к MongoDB)
+bin/compare-collections \
+  --mode file \
+  --collection1 FeeReport \
+  --collection2 FeeReport \
+  --file1 /tmp/reports/compare_2025-01-15_14-30-00/prod-prod-FeeReport.json \
+  --file2 /tmp/reports/compare_2025-01-15_14-30-00/staging-staging-FeeReport.json \
+  --round-precision 2
+```
+
+**Полный пример с фильтром:**
+
+```bash
+bin/compare-collections \
   --collection1 FeeReport_old \
   --collection2 FeeReport_new \
-  --filter '{\"periodId\":\"2025-YTD\"}' \
+  --db1 psm \
+  --db2 psm \
+  --filter '{"periodId":"2025-YTD"}' \
   --exclude-fields time,periodId,to \
   --round-precision 0 \
   --key _id \
   --exclude-from-cut cpIdStr,currency \
-  --output-path /tmp/reports"
+  --output-path /tmp/reports
 ```
 
-Составной ключ (совпадение по нескольким полям):
+**Составной ключ (совпадение по нескольким полям):**
 
 ```bash
-sbt "run \
+bin/compare-collections \
   --collection1 transactions_v1 \
   --collection2 transactions_v2 \
+  --db1 mydb \
+  --db2 mydb \
   --key '(_id,date)' \
   --round-precision 2 \
-  --output-path ./reports"
+  --output-path ./reports
 ```
 
 ## Структура отчётов
 
-После запуска в `--output-path` создаётся папка вида `compare_YYYY-MM-DD_HH-mm-ss/` с **19 файлами**:
+После запуска в `--output-path` создаётся папка вида `compare_YYYY-MM-DD_HH-mm-ss/` с файлами:
 
 ```
 compare_2025-01-15_14-30-00/
-├── all_results.csv                        # все документы (общие + only-in)
+├── <host1>-<db1>-<collection1>.json           # [только при --keep] сырые данные коллекции 1
+├── <host2>-<db2>-<collection2>.json           # [только при --keep] сырые данные коллекции 2
+├── all_results.csv                            # все документы (общие + only-in)
 ├── all_results.json
 ├── all_results.xlsx
-├── no_diff_results.csv                    # общие документы без различий
+├── no_diff_results.csv                        # общие документы без различий
 ├── no_diff_results.json
 ├── no_diff_results.xlsx
-├── has_diff_results.csv                   # общие документы с различиями (по убыванию суммарного отклонения)
+├── has_diff_results.csv                       # общие документы с различиями
 ├── has_diff_results.json
 ├── has_diff_results.xlsx
-├── has_diff_results_cut.csv               # то же, но колонки без различий удалены
+├── has_diff_results_cut.csv                   # то же, но колонки без различий удалены
 ├── has_diff_results_cut.json
 ├── has_diff_results_cut.xlsx
-├── only-<host1>-<collection1>.csv         # документы, присутствующие только в первой коллекции
+├── only-<host1>-<collection1>.csv             # документы только в первой коллекции
 ├── only-<host1>-<collection1>.json
 ├── only-<host1>-<collection1>.xlsx
-├── only-<host2>-<collection2>.csv         # документы, присутствующие только во второй коллекции
+├── only-<host2>-<collection2>.csv             # документы только во второй коллекции
 ├── only-<host2>-<collection2>.json
 ├── only-<host2>-<collection2>.xlsx
-└── summary.json                           # общая статистика
+└── summary.json                               # общая статистика
 ```
 
-> Имена `<host>` и `<collection>` берутся из параметров запуска; специальные символы (`.`, `:`, `/` и т.д.) заменяются
-> на `_`.
+> В режиме `--mode file` имена `<host1>`/`<host2>` заменяются на `file`.
 
 ### Формат CSV / XLSX
 
@@ -199,12 +360,22 @@ compare_2025-01-15_14-30-00/
 
 ### `_cut`-вариант
 
-`has_diff_results_cut.*` — те же данные, что в `has_diff_results.*`, но колонки удалены по следующему правилу:
+`has_diff_results_cut.*` — те же данные, но колонки удалены по следующему правилу:
 
 - Удаляется колонка, если у **всех** документов в наборе `is_X_same = true`
 - **Всегда сохраняются**: `_id`, поля из `--key`, поля из `--exclude-from-cut`
 
-Позволяет сосредоточиться только на реально отличающихся полях при большом числе колонок.
+### Формат Extended JSON файлов (`--keep` / `--mode file`)
+
+Файлы записываются и читаются в формате **MongoDB Relaxed Extended JSON v2**.
+Массив JSON-объектов, где типы BSON сохраняются через специальные ключи:
+
+| Тип BSON   | Представление                                         |
+|------------|-------------------------------------------------------|
+| ObjectId   | `{"$oid": "507f1f77bcf86cd799439011"}`                |
+| Date       | `{"$date": "2025-01-15T14:30:00Z"}`                   |
+| Decimal128 | `{"$numberDecimal": "3.14"}`                          |
+| Int32/Int64/Double | обычные JSON-числа: `42`, `3.14`              |
 
 ### Формат summary.json
 
@@ -228,26 +399,38 @@ compare_2025-01-15_14-30-00/
 }
 ```
 
-`fieldFrequency` — количество документов с различием по каждому полю (по убыванию).
-`onlyIn1Count` / `onlyIn2Count` — документы, найденные только в первой / второй коллекции.
-
 ## Структура проекта
 
 ```
 src/main/scala/.../
-├── CompareApp.scala          # точка входа
-├── CliConfig.scala           # модель CLI-параметров
-├── CliParser.scala           # scopt-парсер
-├── MongoConfig.scala         # конфигурация MongoDB (host, user, password, pool, ...)
-├── BsonFlattener.scala       # разворачивание вложенных BSON в dot notation
-├── FieldComparator.scala     # сравнение и округление значений
-├── ComparisonResult.scala    # модели данных
-├── MongoService.scala        # подключение к MongoDB и выборка документов
-├── DocumentProcessor.scala   # оркестрация сравнения + логика cut
-├── CsvWriter.scala
-├── JsonWriter.scala
-├── ExcelWriter.scala
-└── ReportOrchestrator.scala  # создание папки и запись всех отчётов
+├── CompareApp.scala           # точка входа
+├── ReportOrchestrator.scala   # создание папки и запись всех отчётов
+├── config/
+│   ├── AppConfig.scala        # sealed ADT: AppConfig / RemoteConfig / FileConfig
+│   ├── CliConfig.scala        # внутренний scopt-аккумулятор (не public API)
+│   ├── CliParser.scala        # scopt-парсер → Option[AppConfig]
+│   ├── RunMode.scala          # Remote | File
+│   ├── SortSpec.scala
+│   ├── ReportType.scala
+│   └── ExcelFormulaSeparator.scala
+├── mongo/
+│   ├── DocFetcher.scala        # интерфейс получения документов
+│   ├── MongoService.scala      # реализация для MongoDB
+│   ├── FileDocFetcher.scala    # реализация для локальных Extended JSON файлов
+│   ├── SavingDocFetcher.scala  # обёртка: сохраняет документы в файл после загрузки
+│   ├── MongoConfig.scala
+│   ├── DocumentProcessor.scala
+│   ├── BsonFlattener.scala
+│   ├── BsonUtils.scala
+│   └── FieldComparator.scala
+├── model/
+│   ├── ComparisonReport.scala
+│   ├── DocumentResult.scala
+│   └── FieldResult.scala
+└── writer/
+    ├── JsonWriter.scala
+    ├── CsvWriter.scala
+    └── ExcelWriter.scala
 src/main/resources/
-└── application.conf          # настройки MongoDB
+└── application.conf            # настройки MongoDB
 ```

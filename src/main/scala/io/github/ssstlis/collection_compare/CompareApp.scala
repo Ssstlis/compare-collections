@@ -1,7 +1,7 @@
 package io.github.ssstlis.collection_compare
 
-import io.github.ssstlis.collection_compare.config.CliParser
-import io.github.ssstlis.collection_compare.mongo.{DocumentProcessor, MongoConfig, MongoService}
+import io.github.ssstlis.collection_compare.config.{CliParser, FileConfig, RemoteConfig}
+import io.github.ssstlis.collection_compare.mongo._
 
 object CompareApp extends App {
   CliParser.parse(args) match {
@@ -9,44 +9,83 @@ object CompareApp extends App {
       sys.exit(1)
 
     case Some(cfg) =>
-     println(s"""|=== MongoDB Collection Comparison Tool ===
-                 |  Config key 1       : ${cfg.host1.getOrElse(MongoConfig.defaultKey)}
-                 |  Config key 2       : ${cfg.host2.getOrElse(MongoConfig.defaultKey)}
-                 |  DB 1               : ${cfg.db1}
-                 |  DB 2               : ${cfg.db2}
-                 |  Collection 1       : ${cfg.collection1}
-                 |  Collection 2       : ${cfg.collection2}
-                 |  Filter             : ${cfg.filter}
-                 |  Request timeout    : ${cfg.requestTimeout}
-                 |  Exclude fields     : ${if (cfg.excludeFields.isEmpty) "-" else cfg.excludeFields.mkString(", ")}
-                 |  Projection excl.   : ${if (cfg.projectionExclude.isEmpty) "-" else cfg.projectionExclude.mkString(", ")}
-                 |  Round precision    : ${cfg.roundPrecision}
-                 |  Key                : ${cfg.key.mkString(", ")}
-                 |  Exclude from cut   : ${if (cfg.excludeFromCut.isEmpty) "-" else cfg.excludeFromCut.mkString(", ")}
-                 |  Sort               : ${if (cfg.sortBy.isEmpty) "-" else cfg.sortBy.map(_.asInfoString).mkString(", ")}
-                 |  Output path        : ${cfg.outputPath}
-                 |  Reports            : ${cfg.reports.mkString(", ")}
-                 |  Formulas delimiter : ${cfg.excelFormulasDelimiter}
-                 |""".stripMargin('|'))
+      val outDir = ReportOrchestrator.makeDir(cfg.outputPath)
 
-      val config1 = MongoConfig.load(cfg.host1.getOrElse(MongoConfig.defaultKey))
-      val config2 = MongoConfig.load(cfg.host2.getOrElse(MongoConfig.defaultKey))
+      val (fetcher1, fetcher2): (DocFetcher, DocFetcher) = cfg match {
 
-      val mongo1 = new MongoService(config1, cfg.db1, cfg.requestTimeout)
-      val mongo2 = new MongoService(config2, cfg.db2, cfg.requestTimeout)
+        case r: RemoteConfig =>
+          println(s"""|=== MongoDB Collection Comparison Tool ===
+                      |  Mode               : remote
+                      |  Config key 1       : ${r.host1}
+                      |  Config key 2       : ${r.host2}
+                      |  DB 1               : ${r.db1}
+                      |  DB 2               : ${r.db2}
+                      |  Collection 1       : ${r.collection1}
+                      |  Collection 2       : ${r.collection2}
+                      |  Keep raw docs      : ${r.keep}
+                      |  Filter             : ${r.filter}
+                      |  Request timeout    : ${r.requestTimeout}
+                      |  Exclude fields     : ${if (r.excludeFields.isEmpty) "-" else r.excludeFields.mkString(", ")}
+                      |  Projection excl.   : ${if (r.projectionExclude.isEmpty) "-" else r.projectionExclude.mkString(", ")}
+                      |  Round precision    : ${r.roundPrecision}
+                      |  Key                : ${r.key.mkString(", ")}
+                      |  Exclude from cut   : ${if (r.excludeFromCut.isEmpty) "-" else r.excludeFromCut.mkString(", ")}
+                      |  Sort               : ${if (r.sortBy.isEmpty) "-" else r.sortBy.map(_.asInfoString).mkString(", ")}
+                      |  Output path        : ${r.outputPath}
+                      |  Reports            : ${r.reports.mkString(", ")}
+                      |  Formulas delimiter : ${r.excelFormulasDelimiter}
+                      |""".stripMargin('|'))
 
-      val processor = new DocumentProcessor(mongo1, mongo2)
+          val mongo1 = new MongoService(MongoConfig.load(r.host1), r.db1, r.requestTimeout)
+          val mongo2 = new MongoService(MongoConfig.load(r.host2), r.db2, r.requestTimeout)
+
+          if (r.keep) {
+            (
+              new SavingDocFetcher(mongo1, outDir.resolve(s"${r.host1}-${r.db1}-${r.collection1}.json")),
+              new SavingDocFetcher(mongo2, outDir.resolve(s"${r.host2}-${r.db2}-${r.collection2}.json"))
+            )
+          } else {
+            (mongo1, mongo2)
+          }
+
+        case f: FileConfig =>
+          println(s"""|=== MongoDB Collection Comparison Tool ===
+                      |  Mode               : file
+                      |  File 1             : ${f.file1}
+                      |  File 2             : ${f.file2}
+                      |  Collection 1       : ${f.collection1}
+                      |  Collection 2       : ${f.collection2}
+                      |  Exclude fields     : ${if (f.excludeFields.isEmpty) "-" else f.excludeFields.mkString(", ")}
+                      |  Round precision    : ${f.roundPrecision}
+                      |  Key                : ${f.key.mkString(", ")}
+                      |  Exclude from cut   : ${if (f.excludeFromCut.isEmpty) "-" else f.excludeFromCut.mkString(", ")}
+                      |  Sort               : ${if (f.sortBy.isEmpty) "-" else f.sortBy.map(_.asInfoString).mkString(", ")}
+                      |  Output path        : ${f.outputPath}
+                      |  Reports            : ${f.reports.mkString(", ")}
+                      |  Formulas delimiter : ${f.excelFormulasDelimiter}
+                      |""".stripMargin('|'))
+
+          (new FileDocFetcher(f.file1), new FileDocFetcher(f.file2))
+      }
+
+      val processor = new DocumentProcessor(fetcher1, fetcher2)
 
       val report =
         try processor.compareCollections(cfg)
-        finally { mongo1.close(); mongo2.close() }
+        finally { fetcher1.close(); fetcher2.close() }
 
       val hasDiffCut = processor.applyCut(report.hasDiff, cfg.key, cfg.excludeFromCut)
+
+      val (host1Label, host2Label) = cfg match {
+        case r: RemoteConfig => (r.host1, r.host2)
+        case _: FileConfig   => ("file", "file")
+      }
+
       //format:off
-      val outDir = ReportOrchestrator.write(
-        report, hasDiffCut, cfg.outputPath, cfg.reports,
-        cfg.host1.getOrElse(MongoConfig.defaultKey), cfg.collection1,
-        cfg.host2.getOrElse(MongoConfig.defaultKey), cfg.collection2,
+      ReportOrchestrator.write(
+        report, hasDiffCut, outDir, cfg.reports,
+        host1Label, cfg.collection1,
+        host2Label, cfg.collection2,
         cfg.excelFormulasDelimiter
       )
       //format:on

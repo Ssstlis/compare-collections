@@ -1,6 +1,6 @@
 package io.github.ssstlis.collection_compare.mongo
 
-import io.github.ssstlis.collection_compare.config.{CliConfig, SortSpec}
+import io.github.ssstlis.collection_compare.config.{RemoteConfig, SortSpec}
 import io.github.ssstlis.collection_compare.model.{DocumentResult, FieldResult}
 import org.bson.{BsonDocument, BsonInt32, BsonString}
 import org.mongodb.scala.Document
@@ -18,8 +18,8 @@ class DocumentProcessorSpec extends AnyFreeSpec with Matchers {
 
   private def doc(json: String): Document = Document(BsonDocument.parse(json))
 
-  private def baseCfg(sortBy: List[SortSpec] = Nil): CliConfig =
-    CliConfig(collection1 = "c1", collection2 = "c2", sortBy = sortBy)
+  private def baseCfg(sortBy: List[SortSpec] = Nil): RemoteConfig =
+    RemoteConfig(collection1 = "c1", collection2 = "c2", db1 = "db1", db2 = "db2", sortBy = sortBy)
 
   private def processor(col1: Seq[Document], col2: Seq[Document]): DocumentProcessor =
     new DocumentProcessor(fakeService(col1), fakeService(col2))

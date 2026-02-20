@@ -35,14 +35,14 @@ object MongoConfig {
   val defaultPort = 27017
   val defaultKey  = "default"
 
-  /** Loads the named section from `application.conf` under `mongodb.<key>`.
+  /** Loads the named section from configuration file under `mongodb.<key>`.
     * Example: `MongoConfig.load("prod")` reads `mongodb.prod { ... }`.
     * Defaults to `mongodb.default` when called without arguments.
     */
   def load(key: String = defaultKey): MongoConfig =
     apply(ConfigFactory.load().getConfig(s"mongodb.$key"))
       .fold(
-        err => throw new RuntimeException(s"mongodb.$key not found in application.conf: ${err.getMessage}", err),
+        err => throw new RuntimeException(s"mongodb.$key not found in configuration file: ${err.getMessage}", err),
         identity
       )
 

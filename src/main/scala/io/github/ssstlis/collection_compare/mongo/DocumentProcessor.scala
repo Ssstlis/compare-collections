@@ -1,21 +1,24 @@
 package io.github.ssstlis.collection_compare.mongo
 
-import io.github.ssstlis.collection_compare.config.{CliConfig, SortDirection, SortMetric, SortSpec}
+import io.github.ssstlis.collection_compare.config.{AppConfig, FileConfig, RemoteConfig, SortDirection, SortMetric, SortSpec}
 import io.github.ssstlis.collection_compare.model.{ComparisonReport, DocumentResult, FieldResult}
 import org.bson.{BsonDocument, BsonString, BsonValue}
 import org.mongodb.scala.Document
 
 class DocumentProcessor(mongo1: DocFetcher, mongo2: DocFetcher) {
 
-  def compareCollections(cfg: CliConfig): ComparisonReport = {
-    val filter     = BsonDocument.parse(cfg.filter)
+  def compareCollections(cfg: AppConfig): ComparisonReport = {
+    val (filter, projectionExclude) = cfg match {
+      case r: RemoteConfig => (BsonDocument.parse(r.filter), r.projectionExclude)
+      case _: FileConfig   => (new BsonDocument(), Nil)
+    }
     val excludeSet = cfg.excludeFields.toSet
     val precision  = cfg.roundPrecision
 
     println(s"Fetching documents from '${cfg.collection1}'...")
-    val docs1 = mongo1.fetchDocs(cfg.collection1, filter, cfg.projectionExclude)
+    val docs1 = mongo1.fetchDocs(cfg.collection1, filter, projectionExclude)
     println(s"Fetching documents from '${cfg.collection2}'...")
-    val docs2 = mongo2.fetchDocs(cfg.collection2, filter, cfg.projectionExclude)
+    val docs2 = mongo2.fetchDocs(cfg.collection2, filter, projectionExclude)
 
     println(s"Found ${docs1.size} documents in '${cfg.collection1}'")
     println(s"Found ${docs2.size} documents in '${cfg.collection2}'")
