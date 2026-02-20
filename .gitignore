@@ -43,3 +43,6 @@ build/
 
 ### Scala ###
 .bsp/
+compare*
+
+src/main/resources/application.conf
