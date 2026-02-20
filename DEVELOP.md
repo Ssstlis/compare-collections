@@ -5,9 +5,41 @@
 ```bash
 sbt compile          # компиляция
 sbt test             # запуск тестов
-sbt run -- --help    # запуск с аргументами
+sbt stage            # сборка дистрибутива → target/universal/stage/
+sbt universal:packageBin  # zip-архив → target/universal/
+
+# запуск без сборки дистрибутива (для разработки)
 sbt "run --collection1 c1 --collection2 c2 --db1 db --db2 db"
+
+# деплой дистрибутива + симлинки на бинарники
+sbt "deploy <deployPath> <linkPath>"
+# пример:
+sbt "deploy /opt/tools ~/.local/bin"
 ```
+
+### Команда `deploy`
+
+Реализация вынесена в `lazy val deployTask: Def.Initialize[InputTask[Unit]]`.
+Подключение к любому проекту — одна строка в `.settings(...)`:
+```scala
+deploy := deployTask.evaluated
+```
+
+Принимает два аргумента через пробел (пути с пробелами не поддерживаются).
+
+Что делает:
+1. Вызывает `Universal/stage` (пересобирает при необходимости)
+2. Удаляет `<deployPath>/<name>-<version>/` если существует
+3. Копирует `target/universal/stage/` → `<deployPath>/<name>-<version>/` с `COPY_ATTRIBUTES`
+   (сохраняются права доступа, включая execute-бит на `bin/*`)
+4. Создаёт `<linkPath>/` если не существует
+5. Для каждого файла из `bin/` (не `.bat` на Unix, только `.bat` на Windows) создаёт симлинк
+   в `<linkPath>/`, предварительно удаляя старый если есть
+6. Логирует путь деплоя + размер и каждый созданный симлинк
+7. Выводит `[warn]` для всех директорий в `<deployPath>` старше 30 дней (по `lastModifiedTime`),
+   отсортированных по убыванию возраста
+
+Вспомогательные функции в `build.sbt`: `formatBytes`, `copyDir`, `dirSize`.
 
 ## Coverage
 

@@ -66,8 +66,8 @@ mongodb {
 ```bash
 JAVA_OPTS="-Dconfig.file=/path/to/my-mongo.conf" \
   bin/compare-collections \
-  --collection1 FeeReport \
-  --collection2 FeeReport \
+  --collection1 Report \
+  --collection2 Report \
   --db1 prod \
   --db2 staging \
   --host1 prod \
@@ -100,18 +100,39 @@ mongodb {
 
 > Секция `default` не обязательна, если всегда явно передаются `--host1` и `--host2`.
 
-## Сборка
+## Сборка и деплой
 
 ```bash
-# Сборка и генерация запускаемого дистрибутива в target/universal/stage/
+# Сборка дистрибутива в target/universal/stage/
 sbt stage
 
 # Сборка zip-архива дистрибутива в target/universal/
 sbt universal:packageBin
 ```
 
-После `sbt stage` скрипт запуска находится по пути `target/universal/stage/bin/compare-collections`.
-Для удобства добавьте его в `PATH` или создайте симлинк.
+### Деплой командой `deploy`
+
+```bash
+sbt "deploy <deployPath> <linkPath>"
+```
+
+Команда:
+1. Запускает `sbt stage` (если нужно)
+2. Копирует `target/universal/stage/` в `<deployPath>/compare-collections-<version>/` (с сохранением прав доступа)
+3. Создаёт симлинки для всех бинарников из `bin/` в `<linkPath>/`
+4. Выводит путь деплоя с объёмом данных и список прилинкованных файлов
+5. Предупреждает о папках в `<deployPath>`, которые не обновлялись более 30 дней
+
+```bash
+sbt "deploy /opt/tools ~/.local/bin"
+# [info] Deployed  : /opt/tools/compare-collections-0.1.0-SNAPSHOT  (42.3 MB)
+# [info] Linked    : /home/user/.local/bin/compare-collections  →  /opt/tools/.../bin/compare-collections
+# [warn] Stale deployments in /opt/tools (older than 30 days):
+# [warn]   compare-collections-0.0.9  (45 days ago)
+# [warn]   compare-collections-0.0.8  (92 days ago)
+```
+
+> Пути с пробелами не поддерживаются. На Windows линкуются только `.bat`-файлы.
 
 ## Запуск
 
@@ -129,8 +150,8 @@ bin/compare-collections --collection1 <col1> --collection2 <col2> [опции]
 
 ```bash
 bin/compare-collections \
-  --collection1 FeeReport_old \
-  --collection2 FeeReport_new \
+  --collection1 Report_old \
+  --collection2 Report_new \
   --db1 mydb \
   --db2 mydb
 ```
@@ -141,14 +162,14 @@ bin/compare-collections \
 
 ```bash
 bin/compare-collections \
-  --collection1 FeeReport_old \
-  --collection2 FeeReport_new \
+  --collection1 Report_old \
+  --collection2 Report_new \
   --db1 mydb \
   --db2 mydb \
   --keep \
   --output-path /tmp/reports
-# → создаст /tmp/reports/compare_YYYY-MM-DD_HH-mm-ss/default-mydb-FeeReport_old.json
-#           /tmp/reports/compare_YYYY-MM-DD_HH-mm-ss/default-mydb-FeeReport_new.json
+# → создаст /tmp/reports/compare_YYYY-MM-DD_HH-mm-ss/default-mydb-Report_old.json
+#           /tmp/reports/compare_YYYY-MM-DD_HH-mm-ss/default-mydb-Report_new.json
 ```
 
 ### `--mode file`
@@ -160,10 +181,10 @@ bin/compare-collections \
 ```bash
 bin/compare-collections \
   --mode file \
-  --collection1 FeeReport_old \
-  --collection2 FeeReport_new \
-  --file1 /tmp/reports/compare_2025-01-15_14-30-00/FeeReport_old.json \
-  --file2 /tmp/reports/compare_2025-01-15_14-30-00/FeeReport_new.json
+  --collection1 Report_old \
+  --collection2 Report_new \
+  --file1 /tmp/reports/compare_2025-01-15_14-30-00/Report_old.json \
+  --file2 /tmp/reports/compare_2025-01-15_14-30-00/Report_new.json
 ```
 
 **Формат файла** — JSON-массив документов в MongoDB Relaxed Extended JSON v2:
@@ -251,8 +272,8 @@ bin/compare-collections \
 # my-mongo.conf: mongodb { old { host = "mongo-old" ... } new { host = "mongo-new" ... } }
 JAVA_OPTS="-Dconfig.file=/path/to/my-mongo.conf" \
   bin/compare-collections \
-  --collection1 FeeReport_old \
-  --collection2 FeeReport_new \
+  --collection1 Report_old \
+  --collection2 Report_new \
   --db1 psm \
   --db2 psm \
   --host1 old \
@@ -266,8 +287,8 @@ JAVA_OPTS="-Dconfig.file=/path/to/my-mongo.conf" \
 # Шаг 1: загрузить из MongoDB и сохранить
 JAVA_OPTS="-Dconfig.file=/path/to/my-mongo.conf" \
   bin/compare-collections \
-  --collection1 FeeReport \
-  --collection2 FeeReport \
+  --collection1 Report \
+  --collection2 Report \
   --db1 prod \
   --db2 staging \
   --host1 prod \
@@ -278,10 +299,10 @@ JAVA_OPTS="-Dconfig.file=/path/to/my-mongo.conf" \
 # Шаг 2: использовать сохранённые файлы (без подключения к MongoDB)
 bin/compare-collections \
   --mode file \
-  --collection1 FeeReport \
-  --collection2 FeeReport \
-  --file1 /tmp/reports/compare_2025-01-15_14-30-00/prod-prod-FeeReport.json \
-  --file2 /tmp/reports/compare_2025-01-15_14-30-00/staging-staging-FeeReport.json \
+  --collection1 Report \
+  --collection2 Report \
+  --file1 /tmp/reports/compare_2025-01-15_14-30-00/prod-prod-Report.json \
+  --file2 /tmp/reports/compare_2025-01-15_14-30-00/staging-staging-Report.json \
   --round-precision 2
 ```
 
@@ -289,8 +310,8 @@ bin/compare-collections \
 
 ```bash
 bin/compare-collections \
-  --collection1 FeeReport_old \
-  --collection2 FeeReport_new \
+  --collection1 Report_old \
+  --collection2 Report_new \
   --db1 psm \
   --db2 psm \
   --filter '{"periodId":"2025-YTD"}' \
