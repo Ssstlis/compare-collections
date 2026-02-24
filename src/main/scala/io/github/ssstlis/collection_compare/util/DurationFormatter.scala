@@ -6,7 +6,13 @@ object DurationFormatter {
   val smallFractionsCount: Int = 2
   case class DurationStructuredExtra(millis: Long, micros: Long, nanos: Long)
 
-  case class DurationStructured(days: Long, hours: Long, minutes: Long, seconds: Long, extras: Option[DurationStructuredExtra]) {
+  case class DurationStructured(
+    days: Long,
+    hours: Long,
+    minutes: Long,
+    seconds: Long,
+    extras: Option[DurationStructuredExtra]
+  ) {
     def getParts: List[Long] = {
       val baseParts = List(days, hours, minutes, seconds)
       extras.map(e => baseParts ::: List(e.millis, e.micros, e.nanos)).getOrElse(baseParts)
@@ -14,34 +20,33 @@ object DurationFormatter {
   }
 
   def getStructure(duration: Duration, extra: Boolean = false): DurationStructured = {
-    val days = duration.toDays
-    val hours = duration.toHours % 24
-    val minutes = duration.toMinutes % 60
+    val days    = duration.toDays
+    val hours   = duration.toHours    % 24
+    val minutes = duration.toMinutes  % 60
     val seconds = duration.getSeconds % 60
 
     val extras = if (extra) {
       // Get total nanoseconds in the sub-second part
-      val totalNanos = duration.getNano
+      val totalNanos   = duration.getNano
       val millis: Long = totalNanos / 1000000
       val micros: Long = (totalNanos % 1000000) / 1000
-      val nanos: Long = totalNanos % 1000
+      val nanos: Long  = totalNanos  % 1000
       Some(DurationStructuredExtra(millis, micros, nanos))
     } else None
     DurationStructured(days, hours, minutes, seconds, extras)
   }
 
-  /**
-   * Pretty-prints a Java Duration in human-readable format.
-   *
-   * Examples:
-   *   - Duration.ofSeconds(45) => "45 seconds"
-   *   - Duration.ofMinutes(5) => "5 minutes"
-   *   - Duration.ofHours(2).plusMinutes(30) => "2 hours, 30 minutes"
-   *   - Duration.ofDays(1).plusHours(3).plusMinutes(15).plusSeconds(30) => "1 day, 3 hours, 15 minutes, 30 seconds"
-   *   - Duration.ofMillis(1500) => "1 second, 500 milliseconds"
-   * @param showSmallFractions Flag for display or not display microseconds and nanoseconds if they are smallest
-   *                           of all units (default: true)
-   */
+  /** Pretty-prints a Java Duration in human-readable format.
+    *
+    * Examples:
+    *   - Duration.ofSeconds(45) => "45 seconds"
+    *   - Duration.ofMinutes(5) => "5 minutes"
+    *   - Duration.ofHours(2).plusMinutes(30) => "2 hours, 30 minutes"
+    *   - Duration.ofDays(1).plusHours(3).plusMinutes(15).plusSeconds(30) => "1 day, 3 hours, 15 minutes, 30 seconds"
+    *   - Duration.ofMillis(1500) => "1 second, 500 milliseconds"
+    * @param showSmallFractions
+    *   Flag for display or not display microseconds and nanoseconds if they are smallest of all units (default: true)
+    */
   def prettyPrint(duration: Duration, showSmallFractions: Boolean = true): String = {
     if (duration.isZero) return "0 secs"
     if (duration.isNegative) return s"${prettyPrint(duration.negated(), showSmallFractions)} ago"
@@ -61,13 +66,13 @@ object DurationFormatter {
       .mkString(", ")
   }
 
-  /**
-   * Compact version that shows only the most significant units.
-   *
-   * @param maxUnits Maximum number of time units to display (default: 2)
-   * @param showSmallFractions Flag for display or not display microseconds and nanoseconds if they are smallest
-   *                           of all units (default: true)
-   */
+  /** Compact version that shows only the most significant units.
+    *
+    * @param maxUnits
+    *   Maximum number of time units to display (default: 2)
+    * @param showSmallFractions
+    *   Flag for display or not display microseconds and nanoseconds if they are smallest of all units (default: true)
+    */
   def prettyPrintCompact(duration: Duration, maxUnits: Int = 3, showSmallFractions: Boolean = true): String = {
     if (duration.isZero) return "0s"
     if (duration.isNegative) return s"-${prettyPrintCompact(duration.negated(), maxUnits, showSmallFractions)}"
@@ -85,10 +90,8 @@ object DurationFormatter {
       .mkString(" ")
   }
 
-  /**
-   * ISO 8601-style format with colons (HH:MM:SS).
-   * Shows days if present.
-   */
+  /** ISO 8601-style format with colons (HH:MM:SS). Shows days if present.
+    */
   def prettyPrintTime(duration: Duration): String = {
     if (duration.isZero) return "00:00:00"
     if (duration.isNegative) return s"-${prettyPrintTime(duration.negated())}"

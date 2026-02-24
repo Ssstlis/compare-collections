@@ -31,8 +31,8 @@ class FileDocFetcherSpec extends AnyFreeSpec with Matchers {
       withTempFile(json) { path =>
         val docs = new FileDocFetcher(path).fetchDocs("ignored", BsonDocument.parse("{}"))
         docs should have size 2
-        docs(0).toBsonDocument.getInt32("_id").getValue   shouldBe 1
-        docs(1).toBsonDocument.getInt32("_id").getValue   shouldBe 2
+        docs(0).toBsonDocument.getInt32("_id").getValue shouldBe 1
+        docs(1).toBsonDocument.getInt32("_id").getValue shouldBe 2
         docs(0).toBsonDocument.getString("name").getValue shouldBe "Alice"
         docs(1).toBsonDocument.getString("name").getValue shouldBe "Bob"
         docs(0).toBsonDocument.getDouble("amount").getValue shouldBe 100.0
@@ -52,7 +52,7 @@ class FileDocFetcherSpec extends AnyFreeSpec with Matchers {
 
       withTempFile(json) { path =>
         val restrictiveFilter = BsonDocument.parse("""{"x": {"$gt": 100}}""")
-        val docs = new FileDocFetcher(path).fetchDocs("some_other_collection", restrictiveFilter)
+        val docs              = new FileDocFetcher(path).fetchDocs("some_other_collection", restrictiveFilter)
         // filter is ignored; both documents are returned
         docs should have size 2
       }

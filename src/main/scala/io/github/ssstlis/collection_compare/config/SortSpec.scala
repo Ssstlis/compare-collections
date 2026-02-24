@@ -8,31 +8,24 @@ object SortDirection {
 
 sealed trait SortMetric
 object SortMetric {
-  case object Diff extends SortMetric  // numericDiff (v2 − v1)
-  case object V1   extends SortMetric  // numeric value from collection 1
-  case object V2   extends SortMetric  // numeric value from collection 2
+  case object Diff extends SortMetric // numericDiff (v2 − v1)
+  case object V1   extends SortMetric // numeric value from collection 1
+  case object V2   extends SortMetric // numeric value from collection 2
 }
 
 /** One sort criterion.
   *
   * Format: `[abs_]<fieldName>_(diff|1|2) [asc|desc]`
-  *   - `abs_`  prefix  — sort by absolute value
-  *   - `_diff` suffix  — sort by `numericDiff` (v2 − v1)
-  *   - `_1`    suffix  — sort by numeric value from collection 1
-  *   - `_2`    suffix  — sort by numeric value from collection 2
+  *   - `abs_` prefix — sort by absolute value
+  *   - `_diff` suffix — sort by `numericDiff` (v2 − v1)
+  *   - `_1` suffix — sort by numeric value from collection 1
+  *   - `_2` suffix — sort by numeric value from collection 2
   *   - direction defaults to `desc` when omitted
   *
-  * Examples:
-  *   `abs_pnl_diff desc`   → |numericDiff| of field "pnl", descending
-  *   `amount_1 asc`        →  value1 of field "amount", ascending
-  *   `fee_diff`            →  numericDiff of field "fee", descending (default)
+  * Examples: `abs_pnl_diff desc` → |numericDiff| of field "pnl", descending `amount_1 asc` → value1 of field "amount",
+  * ascending `fee_diff` → numericDiff of field "fee", descending (default)
   */
-case class SortSpec(
-  field:     String,
-  metric:    SortMetric,
-  direction: SortDirection,
-  absolute:  Boolean
-) {
+case class SortSpec(field: String, metric: SortMetric, direction: SortDirection, absolute: Boolean) {
   def asInfoString = s"$field $direction"
 }
 
@@ -45,11 +38,12 @@ object SortSpec {
     val (body, direction) = {
       val i = s.lastIndexOf(' ')
       if (i < 0) (s, SortDirection.Desc)
-      else s.substring(i + 1).toLowerCase match {
-        case "asc"  => (s.substring(0, i).trim, SortDirection.Asc)
-        case "desc" => (s.substring(0, i).trim, SortDirection.Desc)
-        case _      => (s, SortDirection.Desc)
-      }
+      else
+        s.substring(i + 1).toLowerCase match {
+          case "asc"  => (s.substring(0, i).trim, SortDirection.Asc)
+          case "desc" => (s.substring(0, i).trim, SortDirection.Desc)
+          case _      => (s, SortDirection.Desc)
+        }
     }
 
     // 2. Strip optional leading `abs_`
@@ -69,16 +63,20 @@ object SortSpec {
 
     parsed match {
       case Some((field, metric)) => Right(SortSpec(field, metric, direction, isAbs))
-      case None =>
+      case None                  =>
         Left(s"Cannot parse sort spec '$raw'. Expected: [abs_]<field>_(diff|1|2) [asc|desc]")
     }
   }
 
   def parseAll(s: String): List[SortSpec] =
-    s.split(',').map(_.trim).filter(_.nonEmpty).flatMap { token =>
-      parse(token) match {
-        case Right(spec) => Some(spec)
-        case Left(err)   => { System.err.println(s"[warn] $err"); None }
+    s.split(',')
+      .map(_.trim)
+      .filter(_.nonEmpty)
+      .flatMap { token =>
+        parse(token) match {
+          case Right(spec) => Some(spec)
+          case Left(err)   => { System.err.println(s"[warn] $err"); None }
+        }
       }
-    }.toList
+      .toList
 }

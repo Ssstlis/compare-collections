@@ -60,8 +60,8 @@ class SortSpecSpec extends AnyFreeSpec with Matchers {
       "parses a comma-separated list of valid specs" in {
         val specs = SortSpec.parseAll("abs_pnl_diff desc, amount_1 asc")
         specs should have size 2
-        specs(0) shouldBe SortSpec("pnl",    SortMetric.Diff, SortDirection.Desc, absolute = true)
-        specs(1) shouldBe SortSpec("amount", SortMetric.V1,   SortDirection.Asc,  absolute = false)
+        specs(0) shouldBe SortSpec("pnl", SortMetric.Diff, SortDirection.Desc, absolute = true)
+        specs(1) shouldBe SortSpec("amount", SortMetric.V1, SortDirection.Asc, absolute = false)
       }
 
       "silently skips invalid specs and returns only the valid ones" in {

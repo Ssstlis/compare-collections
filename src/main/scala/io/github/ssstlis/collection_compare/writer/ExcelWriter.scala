@@ -68,8 +68,8 @@ object ExcelWriter {
     *   - Sheet "other diffs": rows where both pfee and mfee are equal but something else differs
     *   - Sheet "Analysis": empty, to be filled in manually (column C = cpids for back-links)
     *
-    * is_*_same columns are written as booleans; abs_*_diff columns as doubles so that
-    * FILTER(…=FALSE/TRUE) and SORT work correctly in Google Sheets / Excel 365.
+    * is_*_same columns are written as booleans; abs_*_diff columns as doubles so that FILTER(…=FALSE/TRUE) and SORT
+    * work correctly in Google Sheets / Excel 365.
     */
   def writeHasDiff(results: List[DocumentResult], path: Path, delim: ExcelFormulaSeparator): Unit = {
     import delim.d
@@ -90,10 +90,12 @@ object ExcelWriter {
       }
 
     // Column-index sets for typed cell writing (relative to data headers, 0-based)
-    val isBoolIdx = dataHeaders.zipWithIndex
-      .collect { case (h, i) if h.startsWith("is_") && h.endsWith("_same") => i }.toSet
-    val isNumIdx  = dataHeaders.zipWithIndex
-      .collect { case (h, i) if h.startsWith("abs_") && h.endsWith("_diff") => i }.toSet
+    val isBoolIdx = dataHeaders.zipWithIndex.collect {
+      case (h, i) if h.startsWith("is_") && h.endsWith("_same") => i
+    }.toSet
+    val isNumIdx = dataHeaders.zipWithIndex.collect {
+      case (h, i) if h.startsWith("abs_") && h.endsWith("_diff") => i
+    }.toSet
 
     // ── Row 1 (POI 0): B1 = "cpid", data headers at C1.. ──────────────────
     val headerRow = sheet.createRow(0)
@@ -115,10 +117,7 @@ object ExcelWriter {
     )
 
     // B2: extract cpid = first 8 chars of _id (column C)
-    setRawFormula(
-      row2.createCell(1),
-      s"""BYROW(C2:C${d}LAMBDA(val${d}IF(val=""${d}""${d}LEFT(val${d}8))))"""
-    )
+    setRawFormula(row2.createCell(1), s"""BYROW(C2:C${d}LAMBDA(val${d}IF(val=""${d}""${d}LEFT(val${d}8))))""")
 
     // ── Data rows (first data row shares POI row 1 with the formula cells) ──
     results.zipWithIndex.foreach { case (doc, rowIdx) =>
@@ -166,15 +165,14 @@ object ExcelWriter {
 
   /** Adds a single-filter diff sheet (pfee diffs / mfee diffs).
     *
-    * Layout:
-    *   A2  – BYROW formula with hyperlinks back to the matching row in "diffs"
-    *   B1  – LET formula that returns the filtered/sorted table (spills right & down)
+    * Layout: A2 – BYROW formula with hyperlinks back to the matching row in "diffs" B1 – LET formula that returns the
+    * filtered/sorted table (spills right & down)
     */
   private def addDiffSheet(
-    wb:          XSSFWorkbook,
-    name:        String,
-    filterCol:   String,
-    sortCol:     String,
+    wb: XSSFWorkbook,
+    name: String,
+    filterCol: String,
+    sortCol: String,
     filterFalse: Boolean,
     lastColName: String,
     delim: ExcelFormulaSeparator
@@ -211,8 +209,8 @@ object ExcelWriter {
     setRawFormula(row0.createCell(1), formula)
   }
 
-  /** Adds the "other diffs" sheet: rows where BOTH is_mfee_same=TRUE and is_pfee_same=TRUE
-    * (i.e. differences in fields other than mfee and pfee).
+  /** Adds the "other diffs" sheet: rows where BOTH is_mfee_same=TRUE and is_pfee_same=TRUE (i.e. differences in fields
+    * other than mfee and pfee).
     */
   private def addOtherDiffsSheet(wb: XSSFWorkbook, lastColName: String, delim: ExcelFormulaSeparator): Unit = {
     import delim.d
@@ -244,9 +242,9 @@ object ExcelWriter {
     setRawFormula(row0.createCell(1), formula)
   }
 
-  /** Writes a formula string directly to the cell's underlying XML, bypassing POI's
-    * formula parser. This is necessary for functions that POI does not yet support
-    * (LET, LAMBDA, BYROW, FILTER, SORT, CHOOSECOLS, SEQUENCE, ARRAYFORMULA, …).
+  /** Writes a formula string directly to the cell's underlying XML, bypassing POI's formula parser. This is necessary
+    * for functions that POI does not yet support (LET, LAMBDA, BYROW, FILTER, SORT, CHOOSECOLS, SEQUENCE, ARRAYFORMULA,
+    * …).
     */
   private def setRawFormula(cell: Cell, formula: String): Unit =
     cell.asInstanceOf[XSSFCell].getCTCell.addNewF().setStringValue(formula)

@@ -41,13 +41,15 @@ object JsonWriter {
     val fieldFreq = report.hasDiff
       .flatMap(_.fields.filter(!_.isSame).map(_.field))
       .groupBy(identity)
-      .view.mapValues(_.size)
-      .toList.sortBy(-_._2)
+      .view
+      .mapValues(_.size)
+      .toList
+      .sortBy(-_._2)
 
     val numericScores = report.hasDiff.map(_.totalDiffScore).filter(_ > 0)
-    val avg = if (numericScores.nonEmpty) numericScores.sum / numericScores.size else 0.0
-    val min = if (numericScores.nonEmpty) numericScores.min else 0.0
-    val max = if (numericScores.nonEmpty) numericScores.max else 0.0
+    val avg           = if (numericScores.nonEmpty) numericScores.sum / numericScores.size else 0.0
+    val min           = if (numericScores.nonEmpty) numericScores.min else 0.0
+    val max           = if (numericScores.nonEmpty) numericScores.max else 0.0
 
     val bw = new BufferedWriter(new FileWriter(path.toFile))
     try {
@@ -68,13 +70,13 @@ object JsonWriter {
   }
 
   private def bsonJson(v: org.bson.BsonValue): String = v match {
-    case s: org.bson.BsonString     => jsonStr(s.getValue)
-    case i: org.bson.BsonInt32      => i.getValue.toString
-    case l: org.bson.BsonInt64      => l.getValue.toString
-    case d: org.bson.BsonDouble     => d.getValue.toString
-    case b: org.bson.BsonBoolean    => b.getValue.toString
-    case _: org.bson.BsonNull       => "null"
-    case other                      => jsonStr(other.toString)
+    case s: org.bson.BsonString  => jsonStr(s.getValue)
+    case i: org.bson.BsonInt32   => i.getValue.toString
+    case l: org.bson.BsonInt64   => l.getValue.toString
+    case d: org.bson.BsonDouble  => d.getValue.toString
+    case b: org.bson.BsonBoolean => b.getValue.toString
+    case _: org.bson.BsonNull    => "null"
+    case other                   => jsonStr(other.toString)
   }
 
   private def jsonStr(s: String): String =

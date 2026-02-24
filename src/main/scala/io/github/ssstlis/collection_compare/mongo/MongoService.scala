@@ -13,16 +13,12 @@ import scala.concurrent.duration._
 import java.time.{Duration => JDuration}
 
 class MongoService(config: MongoConfig, db: String, requestTimeout: Duration) extends DocFetcher {
-  private val logger: Logger = LoggerFactory.getLogger("MongoService")
-  private val client:   MongoClient   = MongoClient(config.connectionString)
+  private val logger: Logger          = LoggerFactory.getLogger("MongoService")
+  private val client: MongoClient     = MongoClient(config.connectionString)
   private val database: MongoDatabase = client.getDatabase(db)
 
-  def fetchDocs(
-    collectionName:    String,
-    filter:            BsonDocument,
-    projectionExclude: List[String] = Nil
-  ): Seq[Document] = {
-    val startMillis = System.currentTimeMillis()
+  def fetchDocs(collectionName: String, filter: BsonDocument, projectionExclude: List[String] = Nil): Seq[Document] = {
+    val startMillis                           = System.currentTimeMillis()
     val collection: MongoCollection[Document] = database.getCollection(collectionName)
 
     val size = Await.result(collection.countDocuments(filter).toFuture(), requestTimeout)
@@ -31,10 +27,10 @@ class MongoService(config: MongoConfig, db: String, requestTimeout: Duration) ex
     if (size == 0) {
       Nil
     } else {
-      val flag = Promise[Boolean]()
+      val flag        = Promise[Boolean]()
       val accumulator = List.newBuilder[Document]
 
-      val find = collection.find(filter)
+      val find    = collection.find(filter)
       val request =
         if (projectionExclude.nonEmpty) {
           find.projection(Projections.exclude(projectionExclude: _*))
@@ -49,15 +45,15 @@ class MongoService(config: MongoConfig, db: String, requestTimeout: Duration) ex
       val pb = new ProgressBar(s"${config.host.take(8)}-$db-$collectionNameForPB", size)
 
       request.subscribe(
-            doc => {
-              accumulator += doc
-              pb.step()
-            },
-            (e: Throwable) => {
-              logger.error(s"There was an error: $e")
-              flag.failure(e)
-            },
-            () => flag.success(true)
+        doc => {
+          accumulator += doc
+          pb.step()
+        },
+        (e: Throwable) => {
+          logger.error(s"There was an error: $e")
+          flag.failure(e)
+        },
+        () => flag.success(true)
       )
 
       try {

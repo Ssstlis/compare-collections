@@ -11,8 +11,8 @@ object FieldComparator {
     case d: BsonDouble =>
       val factor = pow(10, precision)
       new BsonDouble(round(d.getValue * factor) / factor)
-    case i: BsonInt32  => i
-    case l: BsonInt64  => l
+    case i: BsonInt32       => i
+    case l: BsonInt64       => l
     case dc: BsonDecimal128 =>
       val factor = pow(10, precision)
       new BsonDouble(round(dc.getValue.bigDecimalValue().doubleValue() * factor) / factor)

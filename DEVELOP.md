@@ -1,5 +1,30 @@
 # Developer Notes
 
+## BuildInfo
+
+Генерируется плагином `sbt-buildinfo` при каждой компиляции.
+Пакет: `io.github.ssstlis.compare_collections.BuildInfo`.
+
+Поля объекта: `name`, `version`, `buildBranch`, `buildCommit`, `buildTime`, `buildNumber`, `modified`.
+
+Конфигурируется через `BuildInfoSpecifiedPlugin` (`project/BuildInfoSpecifiedPlugin.scala`).
+Подключение к проекту: `.enablePlugins(BuildInfoSpecifiedPlugin)`.
+Ключи определены в `project/Key.scala`.
+
+`BuildInfoSpecifiedPlugin.requires = BuildInfoPlugin && GitPlugin` — оба плагина активируются автоматически.
+
+Используется в `CliParser` для флага `--version` и заголовка `--help`.
+Обработка `--version` происходит **до** scopt (т.к. scopt требует обязательные флаги `--collection1`/`--collection2`).
+
+### Команда `deploy`
+
+Реализована в `DeployPlugin` (`project/DeployPlugin.scala`).
+`DeployPlugin.requires = UniversalPlugin`.
+Подключение к проекту: `.enablePlugins(DeployPlugin)`.
+
+`deploy` inputKey объявлен в `DeployPlugin.autoImport` — доступен без дополнительных импортов при включённом плагине.
+Вся логика деплоя, включая хелперы `formatBytes`, `copyDir`, `dirSize`, инкапсулирована в объекте плагина.
+
 ## Сборка и запуск
 
 ```bash
@@ -12,6 +37,8 @@ sbt universal:packageBin  # zip-архив → target/universal/
 sbt "run --collection1 c1 --collection2 c2 --db1 db --db2 db"
 
 # деплой дистрибутива + симлинки на бинарники
+sbt "deploy"
+# пример с использованием переменных окружения $SCALA_APP_DEPLOY_PATH и $SCALA_APP_DEPLOY_LINK_PATH
 sbt "deploy <deployPath> <linkPath>"
 # пример:
 sbt "deploy /opt/tools ~/.local/bin"

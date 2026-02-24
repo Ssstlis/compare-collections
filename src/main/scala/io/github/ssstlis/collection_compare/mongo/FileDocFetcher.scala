@@ -9,17 +9,13 @@ import scala.util.Using
 
 /** Reads a JSON array of documents in MongoDB Relaxed Extended JSON v2 format from a local file.
   *
-  * The `collectionName`, `filter` and `projectionExclude` parameters received by [[fetchDocs]]
-  * are ignored — the file is read as-is and all documents are returned.
+  * The `collectionName`, `filter` and `projectionExclude` parameters received by [[fetchDocs]] are ignored — the file
+  * is read as-is and all documents are returned.
   */
 class FileDocFetcher(filePath: String) extends DocFetcher {
   private val logger: Logger = LoggerFactory.getLogger("FileDocFetcher")
 
-  def fetchDocs(
-    collectionName:    String,
-    filter:            BsonDocument,
-    projectionExclude: List[String] = Nil
-  ): Seq[Document] = {
+  def fetchDocs(collectionName: String, filter: BsonDocument, projectionExclude: List[String] = Nil): Seq[Document] = {
     logger.info(s"Reading documents from file: $filePath")
     val content = Using(Source.fromFile(filePath))(_.mkString).get
     val wrapped = BsonDocument.parse(s"""{"__data__": ${content.trim}}""")

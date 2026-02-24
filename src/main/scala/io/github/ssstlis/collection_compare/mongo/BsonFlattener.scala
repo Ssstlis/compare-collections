@@ -6,9 +6,8 @@ import scala.jdk.CollectionConverters._
 
 object BsonFlattener {
 
-  /** Flattens a BsonDocument into a Map[String, BsonValue] using dot notation.
-    * The `_id` field is always excluded from the returned map.
-    * Fields listed in `excludeFields` are skipped.
+  /** Flattens a BsonDocument into a Map[String, BsonValue] using dot notation. The `_id` field is always excluded from
+    * the returned map. Fields listed in `excludeFields` are skipped.
     */
   def flatten(doc: BsonDocument, excludeFields: Set[String]): Map[String, BsonValue] = {
     val result = collection.mutable.Map.empty[String, BsonValue]
@@ -17,10 +16,10 @@ object BsonFlattener {
   }
 
   private def flattenInto(
-    doc:           BsonDocument,
-    prefix:        String,
+    doc: BsonDocument,
+    prefix: String,
     excludeFields: Set[String],
-    result:        collection.mutable.Map[String, BsonValue]
+    result: collection.mutable.Map[String, BsonValue]
   ): Unit =
     doc.entrySet().asScala.foreach { entry =>
       val key      = entry.getKey

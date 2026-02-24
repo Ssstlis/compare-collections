@@ -4,7 +4,7 @@ import io.github.ssstlis.collection_compare.config.ExcelFormulaSeparator.{Comma,
 
 sealed trait ExcelFormulaSeparator extends Product with Serializable {
   def d: Char = this match {
-    case Comma => ','
+    case Comma     => ','
     case Semicolon => ';'
   }
 }

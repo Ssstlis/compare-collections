@@ -1,5 +1,6 @@
 package io.github.ssstlis.collection_compare.config
 
+import io.github.ssstlis.compare_collections.BuildInfo
 import scopt.{DefaultOParserSetup, OParser, OParserSetup}
 
 import java.util.concurrent.TimeUnit
@@ -15,8 +16,11 @@ object CliParser {
   private val parser: OParser[Unit, CliConfig] = {
     import builder._
     OParser.sequence(
-      programName("compare-collections"),
-      head("compare-collections", "0.1.0"),
+      programName(BuildInfo.name),
+      head(BuildInfo.name, BuildInfo.version),
+      opt[Unit]("version")
+        .action((_, c) => c)
+        .text("Print version information and exit"),
       opt[String]("mode")
         .validate(v => RunMode.parse(v).map(_ => ()))
         .action((v, c) => c.copy(mode = RunMode.parse(v).getOrElse(RunMode.Remote)))
@@ -79,20 +83,32 @@ object CliParser {
         .text("Fields to always keep in the cut report even if they have no differences"),
       opt[String]("sort")
         .action((v, c) => c.copy(sortBy = SortSpec.parseAll(v)))
-        .text("Sort order for result files. Format: [abs_]<field>_(diff|1|2) [asc|desc], ... " +
-          "e.g. \"abs_pnl_diff desc, abs_fee_diff desc\". Overrides default sort by totalDiffScore."),
+        .text(
+          "Sort order for result files. Format: [abs_]<field>_(diff|1|2) [asc|desc], ... " +
+            "e.g. \"abs_pnl_diff desc, abs_fee_diff desc\". Overrides default sort by totalDiffScore."
+        ),
       opt[String]("reports")
         .action((v, c) => c.copy(reports = parseList(v).map(ReportType.parse(_).get).distinct))
         .text("Report formats to generate. Available options: (csv, json, excel)."),
       opt[String]("formula_delim")
         .action((v, c) => c.copy(excelFormulasDelimiter = ExcelFormulaSeparator.parse(v).get))
-        .text("Formula arguments delimiter. Available options: (comma, semicolon)."),
+        .text("Formula arguments delimiter. Available options: (comma, semicolon).")
     )
   }
 
   def parse(args: Array[String]): Option[AppConfig] = {
+    if (args.contains("--version")) {
+      println(s"""|${BuildInfo.name} ${BuildInfo.version}
+                  |  branch    : ${BuildInfo.buildBranch}
+                  |  commit    : ${BuildInfo.buildCommit}
+                  |  built     : ${BuildInfo.buildTime}
+                  |  modified  : ${BuildInfo.modified}
+                  |  build#    : ${BuildInfo.buildNumber}""".stripMargin)
+      sys.exit(0)
+    }
+
     val setup: OParserSetup = new DefaultOParserSetup {
-      override def showUsageOnError      = Some(true)
+      override def showUsageOnError                = Some(true)
       override def errorOnUnknownArgument: Boolean = false
     }
     OParser.parse(parser, args, CliConfig(), setup).flatMap(toAppConfig)
@@ -104,46 +120,50 @@ object CliParser {
         System.err.println("Error: --db1 and --db2 are required in remote mode")
         None
       } else {
-        Some(RemoteConfig(
-          collection1            = raw.collection1,
-          collection2            = raw.collection2,
-          db1                    = raw.db1,
-          db2                    = raw.db2,
-          host1                  = raw.host1.getOrElse("default"),
-          host2                  = raw.host2.getOrElse("default"),
-          keep                   = raw.keep,
-          filter                 = raw.filter,
-          requestTimeout         = raw.requestTimeout,
-          projectionExclude      = raw.projectionExclude,
-          excludeFields          = raw.excludeFields,
-          roundPrecision         = raw.roundPrecision,
-          outputPath             = raw.outputPath,
-          reports                = raw.reports,
-          key                    = raw.key,
-          excludeFromCut         = raw.excludeFromCut,
-          sortBy                 = raw.sortBy,
-          excelFormulasDelimiter = raw.excelFormulasDelimiter
-        ))
+        Some(
+          RemoteConfig(
+            collection1 = raw.collection1,
+            collection2 = raw.collection2,
+            db1 = raw.db1,
+            db2 = raw.db2,
+            host1 = raw.host1.getOrElse("default"),
+            host2 = raw.host2.getOrElse("default"),
+            keep = raw.keep,
+            filter = raw.filter,
+            requestTimeout = raw.requestTimeout,
+            projectionExclude = raw.projectionExclude,
+            excludeFields = raw.excludeFields,
+            roundPrecision = raw.roundPrecision,
+            outputPath = raw.outputPath,
+            reports = raw.reports,
+            key = raw.key,
+            excludeFromCut = raw.excludeFromCut,
+            sortBy = raw.sortBy,
+            excelFormulasDelimiter = raw.excelFormulasDelimiter
+          )
+        )
       }
 
     case RunMode.File =>
       if (raw.keep) System.err.println("Warning: --keep is ignored in file mode")
       (raw.file1, raw.file2) match {
         case (Some(f1), Some(f2)) =>
-          Some(FileConfig(
-            collection1            = raw.collection1,
-            collection2            = raw.collection2,
-            file1                  = f1,
-            file2                  = f2,
-            excludeFields          = raw.excludeFields,
-            roundPrecision         = raw.roundPrecision,
-            outputPath             = raw.outputPath,
-            reports                = raw.reports,
-            key                    = raw.key,
-            excludeFromCut         = raw.excludeFromCut,
-            sortBy                 = raw.sortBy,
-            excelFormulasDelimiter = raw.excelFormulasDelimiter
-          ))
+          Some(
+            FileConfig(
+              collection1 = raw.collection1,
+              collection2 = raw.collection2,
+              file1 = f1,
+              file2 = f2,
+              excludeFields = raw.excludeFields,
+              roundPrecision = raw.roundPrecision,
+              outputPath = raw.outputPath,
+              reports = raw.reports,
+              key = raw.key,
+              excludeFromCut = raw.excludeFromCut,
+              sortBy = raw.sortBy,
+              excelFormulasDelimiter = raw.excelFormulasDelimiter
+            )
+          )
         case _ =>
           System.err.println("Error: --file1 and --file2 are required in file mode")
           None

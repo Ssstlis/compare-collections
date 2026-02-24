@@ -13,7 +13,7 @@ class DocumentProcessorSpec extends AnyFreeSpec with Matchers {
 
   private def fakeService(docs: Seq[Document]): DocFetcher = new DocFetcher {
     def fetchDocs(name: String, filter: BsonDocument, proj: List[String]): Seq[Document] = docs
-    def close(): Unit = ()
+    def close(): Unit                                                                    = ()
   }
 
   private def doc(json: String): Document = Document(BsonDocument.parse(json))
@@ -30,21 +30,19 @@ class DocumentProcessorSpec extends AnyFreeSpec with Matchers {
     "compareCollections" - {
 
       "places a matched document with no field differences into noDiff" in {
-        val d = doc("""{"_id": "a", "x": 1}""")
+        val d      = doc("""{"_id": "a", "x": 1}""")
         val report = processor(Seq(d), Seq(d)).compareCollections(baseCfg())
-        report.noDiff  should have size 1
+        report.noDiff should have size 1
         report.hasDiff shouldBe empty
         report.onlyIn1 shouldBe empty
         report.onlyIn2 shouldBe empty
       }
 
       "places a matched document with field differences into hasDiff" in {
-        val report = processor(
-          Seq(doc("""{"_id": "a", "amount": 100}""")),
-          Seq(doc("""{"_id": "a", "amount": 200}"""))
-        ).compareCollections(baseCfg())
+        val report = processor(Seq(doc("""{"_id": "a", "amount": 100}""")), Seq(doc("""{"_id": "a", "amount": 200}""")))
+          .compareCollections(baseCfg())
         report.hasDiff should have size 1
-        report.noDiff  shouldBe empty
+        report.noDiff shouldBe empty
         report.hasDiff.head.totalDiffScore shouldBe 100.0
       }
 
@@ -54,7 +52,7 @@ class DocumentProcessorSpec extends AnyFreeSpec with Matchers {
         val report = processor(Seq(common, extra), Seq(common)).compareCollections(baseCfg())
         report.onlyIn1 should have size 1
         report.onlyIn2 shouldBe empty
-        report.noDiff  should have size 1
+        report.noDiff should have size 1
       }
 
       "places a document absent in col1 into onlyIn2" in {
@@ -97,41 +95,59 @@ class DocumentProcessorSpec extends AnyFreeSpec with Matchers {
       val proc = new DocumentProcessor(fakeService(Nil), fakeService(Nil))
 
       def fr(name: String, same: Boolean, diff: Double = 0.0): FieldResult =
-        FieldResult(name, Some(new BsonInt32(1)), Some(new BsonInt32(if (same) 1 else 2)),
-          isSame = same, numericDiff = diff)
+        FieldResult(
+          name,
+          Some(new BsonInt32(1)),
+          Some(new BsonInt32(if (same) 1 else 2)),
+          isSame = same,
+          numericDiff = diff
+        )
 
       "removes fields that are identical in every document" in {
-        val docR = DocumentResult(new BsonString("id"),
+        val docR = DocumentResult(
+          new BsonString("id"),
           List(fr("same_f", same = true), fr("diff_f", same = false, diff = 1.0)),
-          hasDifferences = true, totalDiffScore = 1.0)
+          hasDifferences = true,
+          totalDiffScore = 1.0
+        )
 
         val cut = proc.applyCut(List(docR), key = List("_id"), excludeFromCut = Nil)
         cut.head.fields.map(_.field) shouldBe List("diff_f")
       }
 
       "keeps a field when it differs in at least one document" in {
-        val allSame = DocumentResult(new BsonString("i1"),
-          List(fr("f", same = true)), hasDifferences = false, totalDiffScore = 0)
-        val onesDiff = DocumentResult(new BsonString("i2"),
-          List(fr("f", same = false, diff = 5.0)), hasDifferences = true, totalDiffScore = 5)
+        val allSame =
+          DocumentResult(new BsonString("i1"), List(fr("f", same = true)), hasDifferences = false, totalDiffScore = 0)
+        val onesDiff = DocumentResult(
+          new BsonString("i2"),
+          List(fr("f", same = false, diff = 5.0)),
+          hasDifferences = true,
+          totalDiffScore = 5
+        )
 
         val cut = proc.applyCut(List(allSame, onesDiff), key = Nil, excludeFromCut = Nil)
         cut.forall(_.fields.exists(_.field == "f")) shouldBe true
       }
 
       "always keeps non-_id key fields even when their values are identical" in {
-        val docR = DocumentResult(new BsonString("id"),
+        val docR = DocumentResult(
+          new BsonString("id"),
           List(fr("region", same = true), fr("price", same = true)),
-          hasDifferences = false, totalDiffScore = 0)
+          hasDifferences = false,
+          totalDiffScore = 0
+        )
 
         val cut = proc.applyCut(List(docR), key = List("region"), excludeFromCut = Nil)
         cut.head.fields.map(_.field) shouldBe List("region")
       }
 
       "always keeps excludeFromCut fields even when their values are identical" in {
-        val docR = DocumentResult(new BsonString("id"),
+        val docR = DocumentResult(
+          new BsonString("id"),
           List(fr("currency", same = true), fr("noise", same = true)),
-          hasDifferences = false, totalDiffScore = 0)
+          hasDifferences = false,
+          totalDiffScore = 0
+        )
 
         val cut = proc.applyCut(List(docR), key = Nil, excludeFromCut = List("currency"))
         cut.head.fields.map(_.field) shouldBe List("currency")

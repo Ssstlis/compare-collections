@@ -1,6 +1,13 @@
 package io.github.ssstlis.collection_compare.mongo
 
-import io.github.ssstlis.collection_compare.config.{AppConfig, FileConfig, RemoteConfig, SortDirection, SortMetric, SortSpec}
+import io.github.ssstlis.collection_compare.config.{
+  AppConfig,
+  FileConfig,
+  RemoteConfig,
+  SortDirection,
+  SortMetric,
+  SortSpec
+}
 import io.github.ssstlis.collection_compare.model.{ComparisonReport, DocumentResult, FieldResult}
 import org.bson.{BsonDocument, BsonString, BsonValue}
 import org.mongodb.scala.Document
@@ -31,7 +38,9 @@ class DocumentProcessor(mongo1: DocFetcher, mongo2: DocFetcher) {
     val onlyIn2Keys = (map2.keySet -- map1.keySet).toSeq
     val totalCount  = commonKeys.size + onlyIn1Keys.size + onlyIn2Keys.size
 
-    println(s"Processing $totalCount unique documents (${commonKeys.size} common, ${onlyIn1Keys.size} only-in-1, ${onlyIn2Keys.size} only-in-2)...")
+    println(
+      s"Processing $totalCount unique documents (${commonKeys.size} common, ${onlyIn1Keys.size} only-in-1, ${onlyIn2Keys.size} only-in-2)..."
+    )
     if (onlyIn1Keys.nonEmpty) println(s"  Only in col-1: ${previewKeys(onlyIn1Keys)}")
     if (onlyIn2Keys.nonEmpty) println(s"  Only in col-2: ${previewKeys(onlyIn2Keys)}")
 
@@ -45,26 +54,22 @@ class DocumentProcessor(mongo1: DocFetcher, mongo2: DocFetcher) {
 
     val (noDiff, hasDiff) = commonResults.partition(!_.hasDifferences)
     val sortedHasDiff     = sortResults(hasDiff, cfg.sortBy, defaultByScore = true)
-    val sortedNoDiff      = sortResults(noDiff,  cfg.sortBy, defaultByScore = false)
+    val sortedNoDiff      = sortResults(noDiff, cfg.sortBy, defaultByScore = false)
     val sortedOnlyIn1     = sortResults(onlyIn1, cfg.sortBy, defaultByScore = false)
     val sortedOnlyIn2     = sortResults(onlyIn2, cfg.sortBy, defaultByScore = false)
     ComparisonReport(
-      all     = sortedNoDiff ++ sortedHasDiff ++ sortedOnlyIn1 ++ sortedOnlyIn2,
-      noDiff  = sortedNoDiff,
+      all = sortedNoDiff ++ sortedHasDiff ++ sortedOnlyIn1 ++ sortedOnlyIn2,
+      noDiff = sortedNoDiff,
       hasDiff = sortedHasDiff,
       onlyIn1 = sortedOnlyIn1,
       onlyIn2 = sortedOnlyIn2
     )
   }
 
-  /** Returns a copy of `results` with only the columns that have at least one difference kept,
-    * plus any key fields (minus "_id" which is separate) and `excludeFromCut` fields.
+  /** Returns a copy of `results` with only the columns that have at least one difference kept, plus any key fields
+    * (minus "_id" which is separate) and `excludeFromCut` fields.
     */
-  def applyCut(
-    results:        List[DocumentResult],
-    key:            List[String],
-    excludeFromCut: List[String]
-  ): List[DocumentResult] = {
+  def applyCut(results: List[DocumentResult], key: List[String], excludeFromCut: List[String]): List[DocumentResult] = {
     val fieldsWithDiffs = results.flatMap(_.fields.filter(!_.isSame).map(_.field)).toSet
     val alwaysKeep      = (key.filterNot(_ == "_id").toSet) ++ excludeFromCut.toSet
     val keepFields      = fieldsWithDiffs ++ alwaysKeep
@@ -80,15 +85,15 @@ class DocumentProcessor(mongo1: DocFetcher, mongo2: DocFetcher) {
     docs.map(doc => buildKey(doc, keyFields) -> doc).toMap
 
   private def flattenAndCompare(
-    key:       String,
-    doc1:      Option[Document],
-    doc2:      Option[Document],
-    exclude:   Set[String],
+    key: String,
+    doc1: Option[Document],
+    doc2: Option[Document],
+    exclude: Set[String],
     precision: Int
   ): DocumentResult = {
     def toFlat(d: Option[Document]): Map[String, BsonValue] =
       d.map(doc => BsonFlattener.flatten(doc.toBsonDocument, exclude))
-       .getOrElse(Map.empty)
+        .getOrElse(Map.empty)
 
     val flat1 = toFlat(doc1)
     val flat2 = toFlat(doc2)
@@ -99,14 +104,15 @@ class DocumentProcessor(mongo1: DocFetcher, mongo2: DocFetcher) {
       val v1   = flat1.get(field).map(FieldComparator.roundBson(_, precision))
       val v2   = flat2.get(field).map(FieldComparator.roundBson(_, precision))
       val same = FieldComparator.compareValues(v1, v2)
-      val diff = FieldComparator.numericDiff(v1, v2, precision)   // signed X2 - X1
+      val diff = FieldComparator.numericDiff(v1, v2, precision) // signed X2 - X1
       FieldResult(field, v1, v2, same, diff)
     }
 
     val hasDiff    = fieldResults.exists(!_.isSame)
     val totalScore = fieldResults.map(fr => math.abs(fr.numericDiff)).sum
 
-    val idBson: BsonValue = doc1.orElse(doc2)
+    val idBson: BsonValue = doc1
+      .orElse(doc2)
       .flatMap(d => Option(d.toBsonDocument.get("_id")))
       .getOrElse(new BsonString(key))
 
@@ -119,8 +125,8 @@ class DocumentProcessor(mongo1: DocFetcher, mongo2: DocFetcher) {
   }
 
   private def sortResults(
-    docs:           List[DocumentResult],
-    sortBy:         List[SortSpec],
+    docs: List[DocumentResult],
+    sortBy: List[SortSpec],
     defaultByScore: Boolean
   ): List[DocumentResult] =
     if (sortBy.nonEmpty)
@@ -140,14 +146,17 @@ class DocumentProcessor(mongo1: DocFetcher, mongo2: DocFetcher) {
       docs
 
   private def extractSortKey(doc: DocumentResult, spec: SortSpec): String =
-    doc.fields.find(_.field == spec.field).map { fr =>
-      spec.metric match {
-        case SortMetric.Diff =>
-          (if (spec.absolute) math.abs(fr.numericDiff) else fr.numericDiff).toString
-        case SortMetric.V1 => bsonToStr(fr.value1, spec.absolute)
-        case SortMetric.V2 => bsonToStr(fr.value2, spec.absolute)
+    doc.fields
+      .find(_.field == spec.field)
+      .map { fr =>
+        spec.metric match {
+          case SortMetric.Diff =>
+            (if (spec.absolute) math.abs(fr.numericDiff) else fr.numericDiff).toString
+          case SortMetric.V1 => bsonToStr(fr.value1, spec.absolute)
+          case SortMetric.V2 => bsonToStr(fr.value2, spec.absolute)
+        }
       }
-    }.getOrElse("")
+      .getOrElse("")
 
   private def bsonToStr(v: Option[BsonValue], absolute: Boolean): String = {
     val s = v.fold("")(BsonUtils.bsonToString)

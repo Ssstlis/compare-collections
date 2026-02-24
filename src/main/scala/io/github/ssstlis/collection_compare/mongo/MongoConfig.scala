@@ -10,15 +10,15 @@ import scala.util.Try
 case class HostAndPort(host: String, port: Int = MongoConfig.defaultPort)
 
 case class MongoConfig(
-  host:              String,
-  user:              String,
-  password:          String,
-  database:          String,
-  maxPoolSize:       Int,
+  host: String,
+  user: String,
+  password: String,
+  database: String,
+  maxPoolSize: Int,
   waitQueueMultiple: Int,
-  port:              Int,
-  zoneId:            String,
-  hosts:             Seq[HostAndPort]
+  port: Int,
+  zoneId: String,
+  hosts: Seq[HostAndPort]
 ) {
   def connectionString: String = {
     val hostsPart =
@@ -35,9 +35,8 @@ object MongoConfig {
   val defaultPort = 27017
   val defaultKey  = "default"
 
-  /** Loads the named section from configuration file under `mongodb.<key>`.
-    * Example: `MongoConfig.load("prod")` reads `mongodb.prod { ... }`.
-    * Defaults to `mongodb.default` when called without arguments.
+  /** Loads the named section from configuration file under `mongodb.<key>`. Example: `MongoConfig.load("prod")` reads
+    * `mongodb.prod { ... }`. Defaults to `mongodb.default` when called without arguments.
     */
   def load(key: String = defaultKey): MongoConfig =
     apply(ConfigFactory.load().getConfig(s"mongodb.$key"))
@@ -48,15 +47,15 @@ object MongoConfig {
 
   def apply(config: Config): Try[MongoConfig] = scala.util.Try {
     MongoConfig(
-      host              = config.getString("host"),
-      user              = Try(config.getString("user")).getOrElse(""),
-      password          = Try(config.getString("password")).getOrElse(""),
-      database          = config.getString("database"),
-      maxPoolSize       = Try(config.getInt("maxPoolSize")).getOrElse(10),
+      host = config.getString("host"),
+      user = Try(config.getString("user")).getOrElse(""),
+      password = Try(config.getString("password")).getOrElse(""),
+      database = config.getString("database"),
+      maxPoolSize = Try(config.getInt("maxPoolSize")).getOrElse(10),
       waitQueueMultiple = Try(config.getInt("waitQueueMultiple")).getOrElse(2),
-      port              = Try(config.getInt("port")).getOrElse(defaultPort),
-      zoneId            = Try(config.getString("zoneId")).getOrElse(ZoneId.systemDefault().toString),
-      hosts             = Try {
+      port = Try(config.getInt("port")).getOrElse(defaultPort),
+      zoneId = Try(config.getString("zoneId")).getOrElse(ZoneId.systemDefault().toString),
+      hosts = Try {
         val hostConf = config.getConfigList("hosts")
         val itr      = hostConf.iterator()
         val res      = collection.mutable.Map.empty[String, HostAndPort]

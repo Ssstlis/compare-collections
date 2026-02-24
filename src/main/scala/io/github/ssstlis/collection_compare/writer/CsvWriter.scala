@@ -32,7 +32,7 @@ object CsvWriter {
       bw.newLine()
 
       results.foreach { doc =>
-        val fieldMap = doc.fields.map(fr => fr.field -> fr).toMap
+        val fieldMap          = doc.fields.map(fr => fr.field -> fr).toMap
         val row: List[String] =
           BsonUtils.bsonToString(doc.id) :: allFields.flatMap { f =>
             val fr   = fieldMap.get(f)
