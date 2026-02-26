@@ -5,10 +5,9 @@ ThisBuild / version      := "0.1.0-SNAPSHOT"
 ThisBuild / scalaVersion := "2.13.18"
 
 lazy val root = (project in file("."))
-  .enablePlugins(JavaAppPackaging, DeployPlugin, BuildInfoSpecifiedPlugin)
+  .enablePlugins(JavaAppPackaging, LocalDeployPlugin, BuildInfoSpecifiedPlugin)
   .settings(
     scalacOptions := Seq(
-      "-release:11",
       "-g:vars",
       "-unchecked",
       "-deprecation",
@@ -35,6 +34,9 @@ lazy val root = (project in file("."))
       "org.typelevel"     %% "cats-core"          % "2.13.0",
       "org.mongodb.scala" %% "mongo-scala-driver" % "5.6.3",
       "com.github.scopt"  %% "scopt"              % "4.1.0",
+
+      "io.circe"          %% "circe-core"         % "0.14.10",
+      "io.circe"          %% "circe-parser"       % "0.14.10",
       "org.scalatest"     %% "scalatest"          % "3.2.19" % Test
     )
   )

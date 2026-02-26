@@ -1,8 +1,9 @@
 package io.github.ssstlis.collection_compare
 
+import io.github.ssstlis.collection_compare.config.ReportType.Raw
 import io.github.ssstlis.collection_compare.config.{ExcelFormulaSeparator, ReportType}
 import io.github.ssstlis.collection_compare.model.{ComparisonReport, DocumentResult}
-import io.github.ssstlis.collection_compare.writer.{CsvWriter, ExcelWriter, JsonWriter}
+import io.github.ssstlis.collection_compare.writer.{CsvWriter, ExcelWriter, JsonWriter, RawJsonWriter, SummaryWriter}
 
 import java.nio.file.{Files, Path, Paths}
 import java.time.LocalDateTime
@@ -53,16 +54,32 @@ object ReportOrchestrator {
     println(s"\nWriting reports to: $dir")
 
     def writeAll(name: String, docs: List[DocumentResult], enrichedExcel: Boolean = false): Unit = {
-      reports.foreach {
+      val reportsToRun = reports.flatMap {
+        case ReportType.Raw => None
+        case other          => Some(other)
+      }
+
+      reportsToRun.foreach {
         case ReportType.Csv   => CsvWriter.write(docs, dir.resolve(s"$name.csv"))
         case ReportType.Json  => JsonWriter.write(docs, dir.resolve(s"$name.json"))
         case ReportType.Excel =>
           val p = dir.resolve(s"$name.xlsx")
           if (enrichedExcel) ExcelWriter.writeHasDiff(docs, p, delim)
           else ExcelWriter.write(docs, p)
+        case _ => ()
       }
 
-      println(s"  Written $name.{${reports.map(_.ext).sorted.mkString(",")}} (${docs.size} records)")
+      println(s"  Written $name.{${reportsToRun.map(_.ext).sorted.mkString(",")}} (${docs.size} records)")
+    }
+
+    def writeRawReport(
+      name: String,
+      diffs: List[DocumentResult],
+      onlyIn1: List[DocumentResult],
+      onlyIn2: List[DocumentResult]
+    ): Unit = {
+      RawJsonWriter.write(diffs, onlyIn1, diffs, dir.resolve(s"$name.json"))
+      println(s"  Written $name.json (${diffs.size + onlyIn1.size + onlyIn2.size} records)")
     }
 
     writeAll("all_results", report.all)
@@ -72,7 +89,11 @@ object ReportOrchestrator {
     writeAll(s"only-${sanitize(host1)}-${sanitize(collection1)}", report.onlyIn1)
     writeAll(s"only-${sanitize(host2)}-${sanitize(collection2)}", report.onlyIn2)
 
-    JsonWriter.writeSummary(report, dir.resolve("summary.json"))
+    if (reports.contains(ReportType.Raw)) {
+      writeRawReport("raw_results", report.hasDiff, report.onlyIn1, report.onlyIn2)
+    }
+
+    SummaryWriter.writeSummary(report, dir.resolve("summary.json"))
     println("  Written summary.json")
 
     dir

@@ -24,9 +24,9 @@ class DocumentProcessorSpec extends AnyFreeSpec with Matchers {
   private def processor(col1: Seq[Document], col2: Seq[Document]): DocumentProcessor =
     new DocumentProcessor(fakeService(col1), fakeService(col2))
 
-  // ── compareCollections ───────────────────────────────────────────────────
-
   "DocumentProcessor" - {
+    // ── compareCollections ───────────────────────────────────────────────────
+
     "compareCollections" - {
 
       "places a matched document with no field differences into noDiff" in {

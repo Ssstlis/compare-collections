@@ -14,7 +14,7 @@ object CompareApp extends App {
       val (fetcher1, fetcher2): (DocFetcher, DocFetcher) = cfg match {
 
         case r: RemoteConfig => {
-          println(r.excludeFields)
+          if (r.excludeFields.nonEmpty) println(r.excludeFields)
 
           val mongo1 = new MongoService(MongoConfig.load(r.host1), r.db1, r.requestTimeout)
           val mongo2 = new MongoService(MongoConfig.load(r.host2), r.db2, r.requestTimeout)

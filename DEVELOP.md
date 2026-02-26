@@ -223,3 +223,16 @@ MongoDB **Relaxed Extended JSON v2** — массив JSON-объектов:
 ```
 Записывается через `JsonWriterSettings.builder().outputMode(JsonMode.RELAXED)`,
 читается через `BsonDocument.parse(s"""{"__data__": $content}""")`.
+
+---
+
+## История изменений
+
+### 2026-02-25 — JsonWriter / SummaryWriter переведены на circe
+
+- `JsonWriter` и `SummaryWriter` переписаны с ручного string-конкатенирования на `io.circe`.
+- JSON-объекты строятся через `Json.obj` / `Json.arr` напрямую (без `Encoder`-инстансов для моделей).
+- Вывод через `Printer.spaces2` — стандартный human-readable формат circe с отступом 2 пробела.
+- Добавлена зависимость `"io.circe" %% "circe-core" % "0.14.10"` в `build.sbt`.
+- `JsonWriter.jsonStr` удалён (был нужен только для ручного экранирования строк).
+- Запись в файл через `java.nio.file.Files.writeString` вместо `BufferedWriter`.
