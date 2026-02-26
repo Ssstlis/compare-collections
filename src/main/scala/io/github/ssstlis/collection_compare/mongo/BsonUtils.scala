@@ -2,7 +2,17 @@ package io.github.ssstlis.collection_compare.mongo
 
 import io.circe.syntax.EncoderOps
 import io.circe.{Json, parser => CirceJsonParser}
-import org.bson.{BsonArray, BsonBoolean, BsonDocument, BsonDouble, BsonInt32, BsonInt64, BsonNull, BsonString, BsonValue}
+import org.bson.{
+  BsonArray,
+  BsonBoolean,
+  BsonDocument,
+  BsonDouble,
+  BsonInt32,
+  BsonInt64,
+  BsonNull,
+  BsonString,
+  BsonValue
+}
 
 import scala.jdk.CollectionConverters.ListHasAsScala
 
@@ -35,7 +45,7 @@ object BsonUtils {
           case Left(err)    => throw err
           case Right(value) => value
         }
-      case a: BsonArray   =>
+      case a: BsonArray =>
         Json.fromValues(a.getValues.asScala.map(b => bsonJson(b)))
       case s: BsonString  => s.getValue.asJson
       case i: BsonInt32   => i.getValue.asJson

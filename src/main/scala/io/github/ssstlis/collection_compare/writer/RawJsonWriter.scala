@@ -15,10 +15,6 @@ object RawJsonWriter {
     onlyIn2: List[DocumentResult],
     path: Path
   ): Unit = {
-    Json.obj(
-      "only_in_file1" -> Json.arr(),
-      "only_in_file2" -> Json.arr(),
-      "different_values" -> Json.arr(),
-    )
+    Json.obj("only_in_file1" -> Json.arr(), "only_in_file2" -> Json.arr(), "different_values" -> Json.arr())
   }
 }
