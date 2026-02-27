@@ -27,16 +27,16 @@ lazy val root = (project in file("."))
     libraryDependencies ++= Seq(
       "ch.qos.logback"     % "logback-classic"    % "1.5.32",
       "org.slf4j"          % "log4j-over-slf4j"   % "2.0.17",
-      "com.typesafe"       % "config"             % "1.4.5",
+      "com.typesafe"       % "config"             % "1.4.6",
       "org.apache.poi"     % "poi"                % "5.5.1",
       "org.apache.poi"     % "poi-ooxml"          % "5.5.1",
       "me.tongfei"         % "progressbar"        % "0.10.2",
       "org.typelevel"     %% "cats-core"          % "2.13.0",
-      "org.mongodb.scala" %% "mongo-scala-driver" % "5.6.3",
+      "org.mongodb.scala" %% "mongo-scala-driver" % "5.6.4",
       "com.github.scopt"  %% "scopt"              % "4.1.0",
 
-      "io.circe"      %% "circe-core"   % "0.14.10",
-      "io.circe"      %% "circe-parser" % "0.14.10",
+      "io.circe"      %% "circe-core"   % "0.14.15",
+      "io.circe"      %% "circe-parser" % "0.14.15",
       "org.scalatest" %% "scalatest"    % "3.2.19" % Test
     )
   )
