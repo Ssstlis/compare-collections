@@ -27,7 +27,7 @@ lazy val root = (project in file("."))
     libraryDependencies ++= Seq(
       "ch.qos.logback"     % "logback-classic"    % "1.5.32",
       "org.slf4j"          % "log4j-over-slf4j"   % "2.0.17",
-      "com.typesafe"       % "config"             % "1.4.5",
+      "com.typesafe"       % "config"             % "1.4.6",
       "org.apache.poi"     % "poi"                % "5.5.1",
       "org.apache.poi"     % "poi-ooxml"          % "5.5.1",
       "me.tongfei"         % "progressbar"        % "0.10.2",
