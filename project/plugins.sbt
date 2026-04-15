@@ -8,6 +8,6 @@ addSbtPlugin("org.typelevel" % "sbt-tpolecat" % "0.5.3")
 
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.13.1")
 
-addSbtPlugin("io.github.ssstlis" % "sbt-local-deploy" % "1.0.4")
+addSbtPlugin("io.github.ssstlis" % "sbt-local-deploy" % "1.0.5")
 
 resolvers += Resolver.sonatypeCentralSnapshots

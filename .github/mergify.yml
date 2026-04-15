@@ -4,9 +4,9 @@ pull_request_rules:
       - author=ssstlis-bot[bot]
     actions:
       request_reviews:
-        users: [ Ssstlis ]
+        users: [Ssstlis]
       label:
-        add: [ dependency-update ]
+        add: [dependency-update]
 
   - name: Merge Steward's PRs
     conditions:
@@ -25,8 +25,25 @@ pull_request_rules:
       merge:
         method: rebase
 
-  - name: Delete head branch after merge
+  - name: Label conflicting pull requests
+    description: Add a label to a pull request with conflict to spot it easily
     conditions:
-      - merged
+      - conflict
+      - -closed
     actions:
-      delete_head_branch:
+      label:
+        toggle:
+          - conflict
+
+  - name: Ping PR author when conflicting
+    description: Warn the pull request author when their PR are conflicting
+    conditions:
+      - conflict
+      - -closed
+    actions:
+      comment:
+        message: |
+          👋 {{author}} your PR is conflicting and needs to be updated to be merged
+
+merge_protections_settings:
+  reporting_method: check-runs
