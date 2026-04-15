@@ -1,6 +1,6 @@
 import Key.*
-import com.typesafe.sbt.GitPlugin
-import com.typesafe.sbt.SbtGit.git
+import com.github.sbt.git.GitPlugin
+import com.github.sbt.git.SbtGit.git
 import sbt.*
 import sbt.Keys.*
 import sbtbuildinfo.BuildInfoKey
