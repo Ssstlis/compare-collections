@@ -26,7 +26,7 @@ lazy val root = (project in file("."))
     Compile / mainClass := Some("io.github.ssstlis.collection_compare.CompareApp"),
     libraryDependencies ++= Seq(
       "ch.qos.logback"     % "logback-classic"    % "1.5.32",
-      "org.slf4j"          % "log4j-over-slf4j"   % "2.0.17",
+      "org.slf4j"          % "log4j-over-slf4j"   % "2.0.18",
       "com.typesafe"       % "config"             % "1.4.8",
       "org.apache.poi"     % "poi"                % "5.5.1",
       "org.apache.poi"     % "poi-ooxml"          % "5.5.1",
