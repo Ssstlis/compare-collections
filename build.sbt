@@ -25,7 +25,7 @@ lazy val root = (project in file("."))
     name                := "compare-collections",
     Compile / mainClass := Some("io.github.ssstlis.collection_compare.CompareApp"),
     libraryDependencies ++= Seq(
-      "ch.qos.logback"     % "logback-classic"    % "1.5.32",
+      "ch.qos.logback"     % "logback-classic"    % "1.5.34",
       "org.slf4j"          % "log4j-over-slf4j"   % "2.0.18",
       "com.typesafe"       % "config"             % "1.4.8",
       "org.apache.poi"     % "poi"                % "5.5.1",
