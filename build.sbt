@@ -35,8 +35,8 @@ lazy val root = (project in file("."))
       "org.mongodb.scala" %% "mongo-scala-driver" % "5.8.0",
       "com.github.scopt"  %% "scopt"              % "4.1.0",
 
-      "io.circe"      %% "circe-core"   % "0.14.15",
-      "io.circe"      %% "circe-parser" % "0.14.15",
+      "io.circe"      %% "circe-core"   % "0.14.16",
+      "io.circe"      %% "circe-parser" % "0.14.16",
       "org.scalatest" %% "scalatest"    % "3.2.20" % Test
     )
   )
