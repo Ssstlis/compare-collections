@@ -65,18 +65,20 @@ object MongoConfig {
           res.put(hap.host, hap)
         }
         res.values.toList
-      }.orElse(Try {
-        val hostConf = config.getStringList("hosts")
-        val port     = Try(config.getInt("port")).getOrElse(defaultPort)
-        val itr      = hostConf.iterator()
-        val res      = collection.mutable.Map.empty[String, HostAndPort]
-        while (itr.hasNext) {
-          val next = itr.next()
-          val hap  = HostAndPort(next, port)
-          res.put(hap.host, hap)
+      }.orElse(
+        Try {
+          val hostConf = config.getStringList("hosts")
+          val port     = Try(config.getInt("port")).getOrElse(defaultPort)
+          val itr      = hostConf.iterator()
+          val res      = collection.mutable.Map.empty[String, HostAndPort]
+          while (itr.hasNext) {
+            val next = itr.next()
+            val hap  = HostAndPort(next, port)
+            res.put(hap.host, hap)
+          }
+          res.values.toList
         }
-        res.values.toList
-      }).getOrElse(Nil)
+      ).getOrElse(Nil)
     )
   }
 
