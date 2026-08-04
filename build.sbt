@@ -25,18 +25,18 @@ lazy val root = (project in file("."))
     name                := "compare-collections",
     Compile / mainClass := Some("io.github.ssstlis.collection_compare.CompareApp"),
     libraryDependencies ++= Seq(
-      "ch.qos.logback"     % "logback-classic"    % "1.5.34",
+      "ch.qos.logback"     % "logback-classic"    % "1.5.38",
       "org.slf4j"          % "log4j-over-slf4j"   % "2.0.18",
       "com.typesafe"       % "config"             % "1.4.9",
       "org.apache.poi"     % "poi"                % "5.5.1",
       "org.apache.poi"     % "poi-ooxml"          % "5.5.1",
       "me.tongfei"         % "progressbar"        % "0.10.2",
       "org.typelevel"     %% "cats-core"          % "2.13.0",
-      "org.mongodb.scala" %% "mongo-scala-driver" % "5.8.1",
+      "org.mongodb.scala" %% "mongo-scala-driver" % "5.9.0",
       "com.github.scopt"  %% "scopt"              % "4.1.0",
 
-      "io.circe"      %% "circe-core"   % "0.14.15",
-      "io.circe"      %% "circe-parser" % "0.14.15",
+      "io.circe"      %% "circe-core"   % "0.14.16",
+      "io.circe"      %% "circe-parser" % "0.14.16",
       "org.scalatest" %% "scalatest"    % "3.2.20" % Test
     )
   )
