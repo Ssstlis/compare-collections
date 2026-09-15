@@ -6,7 +6,7 @@ addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.7.0")
 
 addSbtPlugin("org.typelevel" % "sbt-tpolecat" % "0.5.7")
 
-addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.13.1")
+addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.13.2")
 
 addSbtPlugin("io.github.ssstlis" % "sbt-local-deploy" % "1.0.5")
 
