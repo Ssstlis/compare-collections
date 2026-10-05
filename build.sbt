@@ -33,7 +33,7 @@ lazy val root = (project in file("."))
       "me.tongfei"         % "progressbar"        % "0.10.2",
       "org.typelevel"     %% "cats-core"          % "2.13.0",
       "org.mongodb.scala" %% "mongo-scala-driver" % "5.9.0",
-      "com.github.scopt"  %% "scopt"              % "4.1.0",
+      "com.github.scopt"  %% "scopt"              % "4.2.0",
 
       "io.circe"      %% "circe-core"   % "0.14.16",
       "io.circe"      %% "circe-parser" % "0.14.16",
